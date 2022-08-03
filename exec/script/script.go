@@ -48,6 +48,7 @@ func NewScriptCommandModelSpec() spec.ExpModelCommandSpec {
 			ExpActions: []spec.ExpActionCommandSpec{
 				NewScriptDelayActionCommand(),
 				NewScriptExitActionCommand(),
+				NewScripExecuteActionCommand(),
 			},
 		},
 	}
@@ -114,3 +115,11 @@ func insertContentToScriptBy(ctx context.Context, channel spec.Channel, function
 	// insert content to the line below
 	return channel.Run(ctx, "sed", fmt.Sprintf(`-i '%s a %s' %s`, lineNum, newContent, scriptFile))
 }
+
+
+func insertContentToScriptByExecute(ctx context.Context, channel spec.Channel, scriptFile string) *spec.Response {
+	return channel.Run(ctx, "", fmt.Sprintf(`%s`, scriptFile))
+}
+
+
+
