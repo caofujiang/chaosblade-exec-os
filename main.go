@@ -64,6 +64,7 @@ func init() {
 
 func main() {
 	args := os.Args
+	fmt.Println("args==",args)
 	if len(args) < 4 {
 		exitAndPrint(spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("invalid parameter, %v", args)), 0)
 	} else {

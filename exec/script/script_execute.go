@@ -22,6 +22,7 @@ import (
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"strings"
 )
 
 type  ScripExecuteActionCommand struct {
@@ -32,11 +33,17 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 	return & ScripExecuteActionCommand{
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{},
-			ActionFlags: []spec.ExpFlagSpec{},
+			ActionFlags: []spec.ExpFlagSpec{
+				&spec.ExpFlag{
+					Name:     "file-args",
+					Desc:     "file-args, a string separated by -",
+					Required: true,
+				},
+			},
 			ActionExecutor: & ScripExecuteExecutor{},
 			ActionExample: `
 # Add commands to the execute script "
-blade create script execute --file test.sh`,
+blade create script execute --file test.sh --file-args this-is-file-args-string`,
 			ActionCategories: []string{category.SystemScript},
 		},
 	}
@@ -74,7 +81,6 @@ func (sde * ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 	if response, ok := sde.channel.IsAllCommandsAvailable(ctx, commands); !ok {
 		return response
 	}
-
 	scriptFile := model.ActionFlags["file"]
 	if scriptFile == "" {
 		log.Errorf(ctx, "file is nil")
@@ -84,19 +90,25 @@ func (sde * ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 		log.Errorf(ctx, "`%s`, file is invalid. it not found", scriptFile)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "file", scriptFile, "it is not found")
 	}
+	fileArgs := model.ActionFlags["file-args"]
+	if fileArgs!=""{
+		ret := strings.Split(fileArgs, "-")
+		fileArgs=strings.Join(ret," ")
+	}
 	if _, ok := spec.IsDestroy(ctx); ok {
 		return sde.stop(ctx, scriptFile)
 	}
-	return sde.start(ctx, scriptFile)
+	return sde.start(ctx, scriptFile,fileArgs)
 }
 
-func (sde * ScripExecuteExecutor) start(ctx context.Context, scriptFile string) *spec.Response {
+func (sde * ScripExecuteExecutor) start(ctx context.Context, scriptFile ,fileArgs string) *spec.Response {
 	// backup file
 	response := backScript(ctx, sde.channel, scriptFile)
 	if !response.Success {
 		return response
 	}
-	response = insertContentToScriptByExecute(ctx, sde.channel,scriptFile)
+
+	response = insertContentToScriptByExecute(ctx, sde.channel,scriptFile,fileArgs)
 	if !response.Success {
 		sde.stop(ctx, scriptFile)
 	}

@@ -117,8 +117,8 @@ func insertContentToScriptBy(ctx context.Context, channel spec.Channel, function
 }
 
 
-func insertContentToScriptByExecute(ctx context.Context, channel spec.Channel, scriptFile string) *spec.Response {
-	return channel.Run(ctx, "", fmt.Sprintf(`%s`, scriptFile))
+func insertContentToScriptByExecute(ctx context.Context, channel spec.Channel, scriptFile,fileArgs string) *spec.Response {
+	return channel.Run(ctx, "", fmt.Sprintf(`%s %s`, scriptFile,fileArgs))
 }
 
 
