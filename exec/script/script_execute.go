@@ -92,7 +92,7 @@ func (sde * ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 	}
 	fileArgs := model.ActionFlags["file-args"]
 	if fileArgs!=""{
-		ret := strings.Split(fileArgs, "-")
+		ret := strings.Split(fileArgs, ":")
 		fileArgs=strings.Join(ret," ")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {

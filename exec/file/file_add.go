@@ -104,7 +104,7 @@ func (*FileAddActionExecutor) Name() string {
 }
 
 func (f *FileAddActionExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
-	commands := []string{"touch", "mkdir", "echo", "rm"}
+	commands := []string{"touch", "mkdir", "echo", "rm","chmod"}
 	if response, ok := f.channel.IsAllCommandsAvailable(ctx, commands); !ok {
 		return response
 	}
@@ -149,7 +149,12 @@ func (f *FileAddActionExecutor) start(cl spec.Channel, filepath, content string,
 					content = string(decodeBytes)
 				}
 			}
-			return f.channel.Run(ctx, "echo", fmt.Sprintf(`"%s" >> "%s"`, content, filepath))
+
+			ret :=f.channel.Run(ctx, "echo", fmt.Sprintf(`"%s" >> "%s"`, content, filepath))
+			if ret.Success !=true || ret.Err!="" {
+				return ret
+			}
+			return f.channel.Run(ctx, "chmod",fmt.Sprintf("+rwx %s", filepath))
 		}
 	}
 }
