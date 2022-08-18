@@ -36,14 +36,14 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 			ActionFlags: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name:     "file-args",
-					Desc:     "file-args, a string separated by -",
+					Desc:     "file-args, a string separated by :",
 					Required: true,
 				},
 			},
 			ActionExecutor: & ScripExecuteExecutor{},
 			ActionExample: `
 # Add commands to the execute script "
-blade create script execute --file test.sh --file-args this-is-file-args-string`,
+blade create script execute --file test.sh --file-args this:is:file:args:string`,
 			ActionCategories: []string{category.SystemScript},
 		},
 	}
