@@ -12,3 +12,5 @@ require (
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220426025253-6d1640d20ae4 => github.com/caofujiang/chaosblade-exec-os v0.0.0-20220818145957-87126593f330
