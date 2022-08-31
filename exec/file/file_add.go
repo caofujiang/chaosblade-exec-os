@@ -20,11 +20,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-exec-os/exec"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"path"
+	"strings"
 
+	"github.com/chaosblade-io/chaosblade-exec-os/exec"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
@@ -104,7 +105,7 @@ func (*FileAddActionExecutor) Name() string {
 }
 
 func (f *FileAddActionExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
-	commands := []string{"touch", "mkdir", "echo", "rm","chmod"}
+	commands := []string{"touch", "mkdir", "echo", "rm", "chmod"}
 	if response, ok := f.channel.IsAllCommandsAvailable(ctx, commands); !ok {
 		return response
 	}
@@ -115,7 +116,7 @@ func (f *FileAddActionExecutor) Exec(uid string, ctx context.Context, model *spe
 	}
 
 	if exec.CheckFilepathExists(ctx, f.channel, filepath) {
-		log.Errorf(ctx,"`%s`: filepath is exist", filepath)
+		log.Errorf(ctx, "`%s`: filepath is exist", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "filepath", filepath, "the filepath is exist")
 	}
 
@@ -130,7 +131,7 @@ func (f *FileAddActionExecutor) Exec(uid string, ctx context.Context, model *spe
 func (f *FileAddActionExecutor) start(cl spec.Channel, filepath, content string, directory, enableBase64, autoCreateDir bool, ctx context.Context) *spec.Response {
 
 	dir := path.Dir(filepath)
-	if autoCreateDir && ! exec.CheckFilepathExists(ctx, cl, filepath) {
+	if autoCreateDir && !exec.CheckFilepathExists(ctx, cl, filepath) {
 		if response := f.channel.Run(ctx, "mkdir", fmt.Sprintf(`-p %s`, dir)); !response.Success {
 			return response
 		}
@@ -149,12 +150,14 @@ func (f *FileAddActionExecutor) start(cl spec.Channel, filepath, content string,
 					content = string(decodeBytes)
 				}
 			}
-
-			ret :=f.channel.Run(ctx, "echo", fmt.Sprintf(`"%s" >> "%s"`, content, filepath))
-			if ret.Success !=true || ret.Err!="" {
+			if find := strings.Contains(content, "$"); find {
+				content = strings.ReplaceAll(content, "$", "\\$")
+			}
+			ret := f.channel.Run(ctx, "echo", fmt.Sprintf(`"%s" >> "%s"`, content, filepath))
+			if ret.Success != true || ret.Err != "" {
 				return ret
 			}
-			return f.channel.Run(ctx, "chmod",fmt.Sprintf("+rwx %s", filepath))
+			return f.channel.Run(ctx, "chmod", fmt.Sprintf("777 %s", filepath))
 		}
 	}
 }
