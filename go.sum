@@ -62,8 +62,8 @@ github.com/tklauser/numcpus v0.2.3/go.mod h1:vpEPS/JC+oZGGQ/My/vJnNsvMDQL6PwOqt8
 github.com/urfave/cli v1.22.2/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-gitlab.x-city.com.cn/chaosblade/chaosblade-spec-go v1.6.1 h1:5HHM6oidjS55Z6snE19A2JEYWLkxUGqpF6y7/kWLYz4=
-gitlab.x-city.com.cn/chaosblade/chaosblade-spec-go v1.6.1/go.mod h1:GMDRCEt9jw2+PdX+S2eKBg4ES6PENRc7xsLohWJWM6s=
+gitlab.x-city.com.cn/chaosblade/chaosblade-spec-go v1.6.2 h1:LsgJIsj5HVtz+c8e4WXYUf/rcZSpdC+mMw6WsJwgjUo=
+gitlab.x-city.com.cn/chaosblade/chaosblade-spec-go v1.6.2/go.mod h1:GMDRCEt9jw2+PdX+S2eKBg4ES6PENRc7xsLohWJWM6s=
 go.uber.org/automaxprocs v1.3.0 h1:II28aZoGdaglS5vVNnspf28lnZpXScxtIozx1lAjdb0=
 go.uber.org/automaxprocs v1.3.0/go.mod h1:9CWT6lKIep8U41DDaPiH6eFscnTyjfTANNQNx6LrIcA=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
