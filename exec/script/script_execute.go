@@ -18,10 +18,12 @@ package script
 
 import (
 	"context"
+	"fmt"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"os"
 	"runtime"
 	"strings"
 )
@@ -122,9 +124,23 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		sde.stop(ctx, scriptFile)
 	}
+	var errInfo string
+	timeContent, err := os.ReadFile(time)
+	if err != nil {
+		errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
+	}
+	timeResult := string(timeContent)
+
+	outContent, err := os.ReadFile(out)
+	if err != nil {
+		errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
+	}
+	outResult := string(outContent)
+
 	var newResult = make(map[string]interface{})
-	newResult["time"] = time
-	newResult["out"] = out
+	newResult["time"] = timeResult
+	newResult["out"] = outResult
+	newResult["errInfo"] = errInfo
 	newResult["outMsg"] = response.Result
 	response.Result = newResult
 	return response
