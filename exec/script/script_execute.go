@@ -23,7 +23,7 @@ import (
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"os"
+	"io/ioutil"
 	"runtime"
 	"strings"
 )
@@ -125,13 +125,13 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		sde.stop(ctx, scriptFile)
 	}
 	var errInfo string
-	timeContent, err := os.ReadFile(time)
+	timeContent, err := ioutil.ReadFile(time)
 	if err != nil {
 		errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
 	}
 	timeResult := string(timeContent)
 
-	outContent, err := os.ReadFile(out)
+	outContent, err := ioutil.ReadFile(out)
 	if err != nil {
 		errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
 	}
