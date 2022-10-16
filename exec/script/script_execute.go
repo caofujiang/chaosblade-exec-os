@@ -24,6 +24,9 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"io/ioutil"
+	"os"
+	osexec "os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -42,11 +45,16 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 					Desc:     "file-args, a string separated by :",
 					Required: true,
 				},
+				&spec.ExpFlag{
+					Name:     "nfs-host",
+					Desc:     "nfs-host, a string contains host and share directory",
+					Required: false,
+				},
 			},
 			ActionExecutor: &ScripExecuteExecutor{},
 			ActionExample: `
 # Add commands to the execute script "
-blade create script execute --file test.sh --file-args this:is:file:args:string`,
+blade create script execute --file test.sh --file-args this:is:file:args:string --nfs-host 10.148.55.117:/record`,
 			ActionCategories: []string{category.SystemScript},
 		},
 	}
@@ -98,13 +106,16 @@ func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *sp
 		ret := strings.Split(fileArgs, ":")
 		fileArgs = strings.Join(ret, " ")
 	}
+
+	nfs := model.ActionFlags["nfs"]
+
 	if _, ok := spec.IsDestroy(ctx); ok {
 		return sde.stop(ctx, scriptFile)
 	}
-	return sde.start(ctx, scriptFile, fileArgs)
+	return sde.start(ctx, scriptFile, fileArgs, nfs)
 }
 
-func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs string) *spec.Response {
+func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, nfs string) *spec.Response {
 	// backup file
 	response := backScript(ctx, sde.channel, scriptFile)
 	if !response.Success {
@@ -124,7 +135,7 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		sde.stop(ctx, scriptFile)
 	}
-	var errInfo string
+	var errInfo, nfsErrInfo string
 	timeContent, err := ioutil.ReadFile(time)
 	if err != nil {
 		errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
@@ -137,10 +148,28 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	}
 	outResult := string(outContent)
 
+	//录制文件存放到nfs
+	//script := "mount 192.168.1.6:/Users/apple/nfs /Users/apple/nfs-server"
+	sharePath, _ := filepath.Split(scriptFile)
+	script := "mount " + nfs + "  " + sharePath
+	cmd := osexec.Command("/bin/sh", "-c", script)
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		nfsErrInfo = fmt.Sprintf("NFS:script failed  %s", err.Error())
+	}
+	fileTime, _ := os.Create(time)
+	fileOut, err := os.Create(out)
+	if err != nil {
+		nfsErrInfo = fmt.Sprintf("NFS:create file  %s", err.Error())
+	}
+	defer fileTime.Close()
+	defer fileOut.Close()
+
 	var newResult = make(map[string]interface{})
 	newResult["time"] = timeResult
 	newResult["out"] = outResult
 	newResult["errInfo"] = errInfo
+	newResult["nfsErrInfo"] = nfsErrInfo
 	newResult["outMsg"] = response.Result
 	response.Result = newResult
 	return response
