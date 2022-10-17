@@ -23,7 +23,6 @@ import (
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"io/ioutil"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -107,7 +106,7 @@ func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *sp
 		fileArgs = strings.Join(ret, " ")
 	}
 
-	nfs := model.ActionFlags["nfs"]
+	nfs := model.ActionFlags["nfs-host"]
 
 	if _, ok := spec.IsDestroy(ctx); ok {
 		return sde.stop(ctx, scriptFile)
@@ -122,6 +121,7 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		return response
 	}
 
+	sharePath, _ := filepath.Split(scriptFile)
 	//录制script脚本执行过程
 	time := scriptFile + ".time"
 	out := scriptFile + ".out"
@@ -135,41 +135,32 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		sde.stop(ctx, scriptFile)
 	}
-	var errInfo, nfsErrInfo string
-	timeContent, err := ioutil.ReadFile(time)
-	if err != nil {
-		errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
-	}
-	timeResult := string(timeContent)
-
-	outContent, err := ioutil.ReadFile(out)
-	if err != nil {
-		errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
-	}
-	outResult := string(outContent)
+	var nfsScriptErrInfo, nfsTimeErrInfo, nfsOutErrInfo string
 
 	//录制文件存放到nfs
 	//script := "mount 192.168.1.6:/Users/apple/nfs /Users/apple/nfs-server"
-	sharePath, _ := filepath.Split(scriptFile)
+
 	script := "mount " + nfs + "  " + sharePath
 	cmd := osexec.Command("/bin/sh", "-c", script)
-	_, err = cmd.CombinedOutput()
+	_, err := cmd.CombinedOutput()
 	if err != nil {
-		nfsErrInfo = fmt.Sprintf("NFS:script failed  %s", err.Error())
+		nfsScriptErrInfo = fmt.Sprintf("NFS:script failed  %s", err.Error())
 	}
-	fileTime, _ := os.Create(time)
+	fileTime, err := os.Create(time)
+	if err != nil {
+		nfsTimeErrInfo = fmt.Sprintf("NFS:create time  file  %s", err.Error())
+	}
 	fileOut, err := os.Create(out)
 	if err != nil {
-		nfsErrInfo = fmt.Sprintf("NFS:create file  %s", err.Error())
+		nfsOutErrInfo = fmt.Sprintf("NFS:create out file  %s", err.Error())
 	}
 	defer fileTime.Close()
 	defer fileOut.Close()
 
 	var newResult = make(map[string]interface{})
-	newResult["time"] = timeResult
-	newResult["out"] = outResult
-	newResult["errInfo"] = errInfo
-	newResult["nfsErrInfo"] = nfsErrInfo
+	newResult["nfsScriptErrInfo"] = nfsScriptErrInfo
+	newResult["nfsTimeErrInfo"] = nfsTimeErrInfo
+	newResult["nfsOutErrInfo"] = nfsOutErrInfo
 	newResult["outMsg"] = response.Result
 	response.Result = newResult
 	return response
