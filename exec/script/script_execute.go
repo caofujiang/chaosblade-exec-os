@@ -153,7 +153,7 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		errMysqlInfo = fmt.Sprintf("open mysql failed  %s", err.Error())
 	}
 	defer db.Close()
-	_, err = db.Exec("update t_chaos_experiment_flow_node_record set output_info =? where result = ? ", outResult, uid)
+	_, err = db.Exec("insert into t_output_info(uid, file_name, output_info)values(?, ?, ?)", uid, out, outResult)
 	if err != nil {
 		errMysqlExecInfo = fmt.Sprintf("mysql exec failed,%s", err.Error())
 	}
