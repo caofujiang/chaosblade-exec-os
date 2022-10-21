@@ -121,8 +121,8 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		return response
 	}
 	//录制script脚本执行过程
-	time := scriptFile + ".time"
-	out := scriptFile + ".out"
+	time := scriptFile + ".time." + uid
+	out := scriptFile + ".out." + uid
 	if runtime.GOOS == "darwin" {
 		scriptFile = "script  -t 2>" + time + " -a " + out + " " + scriptFile
 	} else {

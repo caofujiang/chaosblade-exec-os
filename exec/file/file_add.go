@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"strings"
 
@@ -153,8 +154,12 @@ func (f *FileAddActionExecutor) start(cl spec.Channel, filepath, content string,
 			if find := strings.Contains(content, "$"); find {
 				content = strings.ReplaceAll(content, "$", "\\$")
 			}
-			ret := f.channel.Run(ctx, "echo", fmt.Sprintf(`"%s" >> "%s"`, content, filepath))
-			if ret.Success != true || ret.Err != "" {
+			err := ioutil.WriteFile(filepath, []byte(content), 0777) //写入文件(字节数组)
+			var ret *spec.Response
+			if err != nil {
+				ret.Code = 47001
+				ret.Success = false
+				ret.Result = err.Error()
 				return ret
 			}
 			return f.channel.Run(ctx, "chmod", fmt.Sprintf("777 %s", filepath))
