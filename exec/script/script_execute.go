@@ -17,6 +17,7 @@
 package script
 
 import (
+	"archive/tar"
 	"context"
 	"database/sql"
 	"fmt"
@@ -25,9 +26,15 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	_ "github.com/go-sql-driver/mysql"
+	"io"
 	"io/ioutil"
+	"os"
+	osexec "os/exec"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type ScripExecuteActionCommand struct {
@@ -120,19 +127,33 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		return response
 	}
+
+	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar"
+
+	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
+	UnTar(scriptFile, tarDistDir)
+	scriptMain := tarDistDir + "/main"
+	cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
+	output0, err := cmd.CombinedOutput()
+	var errOsExecInfo string
+	if err != nil {
+		errOsExecInfo = fmt.Sprintf("os.exec.Command chmod  scriptMain 777 failed  %s", err.Error()+string(output0))
+	}
 	//录制script脚本执行过程
-	time := scriptFile + ".time." + uid
-	out := scriptFile + ".out." + uid
+	time := "/tmp/" + uid + ".time"
+	out := "/tmp/" + uid + ".out"
 	if runtime.GOOS == "darwin" {
-		scriptFile = "script  -t 2>" + time + " -a " + out + " " + scriptFile
+		scriptMain = "script  -t 2>" + time + " -a " + out + " " + scriptMain
 	} else {
-		scriptFile = "script  -t 2>" + time + " -a " + out + "  -c  " + "\"" + scriptFile
+		scriptMain = "script  -t 2>" + time + " -a " + out + "  -c  " + "\"" + scriptMain
 		fileArgs += "\""
 	}
-	response = insertContentToScriptByExecute(ctx, sde.channel, scriptFile, fileArgs)
+	response = insertContentToScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
 	if !response.Success {
 		sde.stop(ctx, scriptFile)
 	}
+
+	os.RemoveAll(tarDistDir)
 
 	var errInfo, errMysqlInfo, errMysqlExecInfo string
 	//todo 有需要再放开
@@ -141,25 +162,26 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	//	errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
 	//}
 	//timeResult := string(timeContent)
-	outContent, err := ioutil.ReadFile(out)
-	if err != nil {
-		errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
+	//dsn不为空说明是主机上演练,录制文件存放到mysql dsn = "root:Spx#123456@tcp(10.148.55.116:3306)/blade_ops"
+	if dsn != "" {
+		outContent, err := ioutil.ReadFile(out)
+		if err != nil {
+			errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
+		}
+		outResult := string(outContent)
+		db, err := sql.Open("mysql", dsn)
+		if err != nil {
+			errMysqlInfo = fmt.Sprintf("open mysql failed  %s", err.Error())
+		}
+		defer db.Close()
+		_, err = db.Exec("insert into t_output_info(uid, file_name, output_info)values(?, ?, ?)", uid, out, outResult)
+		if err != nil {
+			errMysqlExecInfo = fmt.Sprintf("mysql exec failed,%s", err.Error())
+		}
 	}
-	outResult := string(outContent)
-	//录制文件存放到mysql
-	//dsn = "root:Spx#123456@tcp(10.148.55.116:3306)/blade_ops"
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		errMysqlInfo = fmt.Sprintf("open mysql failed  %s", err.Error())
-	}
-	defer db.Close()
-	_, err = db.Exec("insert into t_output_info(uid, file_name, output_info)values(?, ?, ?)", uid, out, outResult)
-	if err != nil {
-		errMysqlExecInfo = fmt.Sprintf("mysql exec failed,%s", err.Error())
-	}
-
 	var newResult = make(map[string]interface{})
 	newResult["errInfo"] = errInfo
+	newResult["errOsExecInfo"] = errOsExecInfo
 	newResult["errMysqlInfo"] = errMysqlInfo
 	newResult["errMysqlExecInfo"] = errMysqlExecInfo
 	newResult["outMsg"] = response.Result
@@ -173,4 +195,46 @@ func (sde *ScripExecuteExecutor) stop(ctx context.Context, scriptFile string) *s
 
 func (sde *ScripExecuteExecutor) SetChannel(channel spec.Channel) {
 	sde.channel = channel
+}
+
+func UnTar(srcTar string, dstDir string) (err error) {
+	dstDir = path.Clean(dstDir) + string(os.PathSeparator)
+	fr, er := os.Open(srcTar)
+	if er != nil {
+		return er
+	}
+	defer fr.Close()
+	tr := tar.NewReader(fr)
+	for hdr, er := tr.Next(); er != io.EOF; hdr, er = tr.Next() {
+		if er != nil {
+			return er
+		}
+		fi := hdr.FileInfo()
+		// 获取绝对路径
+		dstFullPath := dstDir + hdr.Name
+		if hdr.Typeflag == tar.TypeDir {
+			os.MkdirAll(dstFullPath, fi.Mode().Perm())
+			os.Chmod(dstFullPath, fi.Mode().Perm())
+		} else {
+			os.MkdirAll(path.Dir(dstFullPath), os.ModePerm)
+			if er := unTarFile(dstFullPath, tr); er != nil {
+				return er
+			}
+			os.Chmod(dstFullPath, fi.Mode().Perm())
+		}
+	}
+	return nil
+}
+
+func unTarFile(dstFile string, tr *tar.Reader) error {
+	fw, er := os.Create(dstFile)
+	if er != nil {
+		return er
+	}
+	defer fw.Close()
+	_, er = io.Copy(fw, tr)
+	if er != nil {
+		return er
+	}
+	return nil
 }
