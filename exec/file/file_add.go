@@ -20,14 +20,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-	"path"
-	"strings"
-
 	"github.com/chaosblade-io/chaosblade-exec-os/exec"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"io/ioutil"
+	"path"
 )
 
 const AddFileBin = "chaos_addfile"
@@ -150,9 +148,6 @@ func (f *FileAddActionExecutor) start(cl spec.Channel, filepath, content string,
 				} else {
 					content = string(decodeBytes)
 				}
-			}
-			if find := strings.Contains(content, "$"); find {
-				content = strings.ReplaceAll(content, "$", "\\$")
 			}
 			err := ioutil.WriteFile(filepath, []byte(content), 0777) //写入文件(字节数组)
 			var ret *spec.Response
