@@ -127,12 +127,18 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		return response
 	}
-
 	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar"
-
 	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
 	UnTar(scriptFile, tarDistDir)
+
+	//判断有没有main主文件，没有直接返错误
 	scriptMain := tarDistDir + "/main"
+	if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
+		response.Success = false
+		response.Code = 45000
+		response.Result = "script files must contain main file"
+		return response
+	}
 	cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
 	output0, err := cmd.CombinedOutput()
 	var errOsExecInfo string
