@@ -18,8 +18,9 @@ package script
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
-	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
@@ -28,6 +29,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	osexec "os/exec"
 	"path"
@@ -52,8 +54,13 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 					Required: true,
 				},
 				&spec.ExpFlag{
-					Name:     "dsn",
-					Desc:     "dsn, a string contains db connetion info",
+					Name:     "downloadUrl",
+					Desc:     "download-url, a url string contains script tar package",
+					Required: false,
+				},
+				&spec.ExpFlag{
+					Name:     "uploadUrl",
+					Desc:     "upload-url, a url string can upload script excute outfile",
 					Required: false,
 				},
 			},
@@ -113,21 +120,35 @@ func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *sp
 		fileArgs = strings.Join(ret, " ")
 	}
 
-	dsn := model.ActionFlags["dsn"]
+	downloadUrl := model.ActionFlags["downloadUrl"]
+	uploadUrl := model.ActionFlags["uploadUrl"]
 
 	if _, ok := spec.IsDestroy(ctx); ok {
 		return sde.stop(ctx, scriptFile)
 	}
-	return sde.start(ctx, scriptFile, fileArgs, dsn, uid)
+	return sde.start(ctx, scriptFile, fileArgs, downloadUrl, uploadUrl, uid)
 }
 
-func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, dsn, uid string) *spec.Response {
+func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, downloadUrl, uploadUrl, uid string) *spec.Response {
 	// backup file
 	response := backScript(ctx, sde.channel, scriptFile)
 	if !response.Success {
 		return response
 	}
-	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar"
+	var errDownloadInfo string
+	if downloadUrl != "" { //host模式
+		if scriptFile != "" {
+			_, fileName := filepath.Split(scriptFile)
+			scriptFile = "/tmp/" + fileName
+		} else {
+			scriptFile = "/tmp/" + fmt.Sprintf("%d", time.Now().UnixNano()) + ".tar"
+		}
+		err := downloadFile(downloadUrl, scriptFile)
+		if err != nil {
+			errDownloadInfo = fmt.Sprintf("downloadFile scriptFile  failed  %s", err.Error())
+		}
+	}
+	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar
 	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
 	UnTar(scriptFile, tarDistDir)
 
@@ -161,35 +182,32 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 
 	os.RemoveAll(tarDistDir)
 
-	var errInfo, errMysqlInfo, errMysqlExecInfo string
+	var errInfo, errUploadInfo string
 	//todo 有需要再放开
 	//timeContent, err := ioutil.ReadFile(time)
 	//if err != nil {
 	//	errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
 	//}
 	//timeResult := string(timeContent)
-	//dsn不为空说明是主机上演练,录制文件存放到mysql dsn = "root:Spx#123456@tcp(10.148.55.116:3306)/blade_ops"
-	if dsn != "" {
+	//uploadUrl不为空说明是主机上演练,录制文件存调用商场接口回传
+	if uploadUrl != "" {
 		outContent, err := ioutil.ReadFile(out)
 		if err != nil {
 			errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
 		}
-		outResult := string(outContent)
-		db, err := sql.Open("mysql", dsn)
+		data := make(map[string]string)
+		data["uid"] = uid
+		data["outputInfo"] = string(outContent)
+		err = uploadFile(uploadUrl, data)
 		if err != nil {
-			errMysqlInfo = fmt.Sprintf("open mysql failed  %s", err.Error())
-		}
-		defer db.Close()
-		_, err = db.Exec("insert into t_output_info(uid, file_name, output_info)values(?, ?, ?)", uid, out, outResult)
-		if err != nil {
-			errMysqlExecInfo = fmt.Sprintf("mysql exec failed,%s", err.Error())
+			errUploadInfo = fmt.Sprintf("uploadFile script-out failed  %s", err.Error())
 		}
 	}
 	var newResult = make(map[string]interface{})
 	newResult["errInfo"] = errInfo
 	newResult["errOsExecInfo"] = errOsExecInfo
-	newResult["errMysqlInfo"] = errMysqlInfo
-	newResult["errMysqlExecInfo"] = errMysqlExecInfo
+	newResult["errDownloadInfo"] = errDownloadInfo
+	newResult["errUploadInfo"] = errUploadInfo
 	newResult["outMsg"] = response.Result
 	response.Result = newResult
 	return response
@@ -231,7 +249,6 @@ func UnTar(srcTar string, dstDir string) (err error) {
 	}
 	return nil
 }
-
 func unTarFile(dstFile string, tr *tar.Reader) error {
 	fw, er := os.Create(dstFile)
 	if er != nil {
@@ -241,6 +258,39 @@ func unTarFile(dstFile string, tr *tar.Reader) error {
 	_, er = io.Copy(fw, tr)
 	if er != nil {
 		return er
+	}
+	return nil
+}
+
+func uploadFile(url string, data map[string]string) error {
+	bytesData, _ := json.Marshal(data)
+	res, err := http.Post(url, "application/json;charset=utf-8", bytes.NewBuffer(bytesData))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	_, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func downloadFile(url string, path string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	out, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	// copy stream
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
 	}
 	return nil
 }
