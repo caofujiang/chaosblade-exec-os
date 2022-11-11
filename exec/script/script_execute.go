@@ -105,8 +105,23 @@ func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *sp
 	if response, ok := sde.channel.IsAllCommandsAvailable(ctx, commands); !ok {
 		return response
 	}
+	downloadUrl := model.ActionFlags["downloadUrl"]
+	uploadUrl := model.ActionFlags["uploadUrl"]
 	scriptFile := model.ActionFlags["file"]
-	if scriptFile == "" {
+	if downloadUrl != "" { //host模式
+		if scriptFile != "" {
+			_, fileName := filepath.Split(scriptFile)
+			scriptFile = "/tmp/" + fileName
+		} else {
+			scriptFile = "/tmp/" + fmt.Sprintf("%d", time.Now().UnixNano()) + ".tar"
+		}
+		err := downloadFile(downloadUrl, scriptFile)
+		if err != nil {
+			log.Errorf(ctx, fmt.Sprintf("download scriptFile  failed  %s", err.Error()))
+			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "params downloadUrl", "it is  invalid")
+		}
+	}
+	if scriptFile == "" { //集群模式
 		log.Errorf(ctx, "file is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "file")
 	}
@@ -119,34 +134,17 @@ func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *sp
 		ret := strings.Split(fileArgs, ":")
 		fileArgs = strings.Join(ret, " ")
 	}
-
-	downloadUrl := model.ActionFlags["downloadUrl"]
-	uploadUrl := model.ActionFlags["uploadUrl"]
-
 	if _, ok := spec.IsDestroy(ctx); ok {
 		return sde.stop(ctx, scriptFile)
 	}
-	return sde.start(ctx, scriptFile, fileArgs, downloadUrl, uploadUrl, uid)
+	return sde.start(ctx, scriptFile, fileArgs, uploadUrl, uid)
 }
 
-func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, downloadUrl, uploadUrl, uid string) *spec.Response {
+func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, uploadUrl, uid string) *spec.Response {
 	// backup file
 	response := backScript(ctx, sde.channel, scriptFile)
 	if !response.Success {
 		return response
-	}
-	var errDownloadInfo string
-	if downloadUrl != "" { //host模式
-		if scriptFile != "" {
-			_, fileName := filepath.Split(scriptFile)
-			scriptFile = "/tmp/" + fileName
-		} else {
-			scriptFile = "/tmp/" + fmt.Sprintf("%d", time.Now().UnixNano()) + ".tar"
-		}
-		err := downloadFile(downloadUrl, scriptFile)
-		if err != nil {
-			errDownloadInfo = fmt.Sprintf("downloadFile scriptFile  failed  %s", err.Error())
-		}
 	}
 	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar
 	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
@@ -206,7 +204,6 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	var newResult = make(map[string]interface{})
 	newResult["errInfo"] = errInfo
 	newResult["errOsExecInfo"] = errOsExecInfo
-	newResult["errDownloadInfo"] = errDownloadInfo
 	newResult["errUploadInfo"] = errUploadInfo
 	newResult["outMsg"] = response.Result
 	response.Result = newResult
