@@ -31,10 +31,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	osexec "os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -146,39 +144,46 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		return response
 	}
-	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar
-	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
-	UnTar(scriptFile, tarDistDir)
 
-	//判断有没有main主文件，没有直接返错误
-	scriptMain := tarDistDir + "/main"
-	if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
-		response.Success = false
-		response.Code = 45000
-		response.Result = "script files must contain main file"
-		return response
-	}
-	cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
-	output0, err := cmd.CombinedOutput()
-	var errOsExecInfo string
-	if err != nil {
-		errOsExecInfo = fmt.Sprintf("os.exec.Command chmod  scriptMain 777 failed  %s", err.Error()+string(output0))
-	}
-	//录制script脚本执行过程
-	time := "/tmp/" + uid + ".time"
-	out := "/tmp/" + uid + ".out"
-	if runtime.GOOS == "darwin" {
-		scriptMain = "script  -t 2>" + time + " -a " + out + " " + scriptMain
-	} else {
-		scriptMain = "script  -t 2>" + time + " -a " + out + "  -c  " + "\"" + scriptMain
-		fileArgs += "\""
-	}
-	response = insertContentToScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
+	response = insertContentToScriptByExecute(ctx, sde.channel, scriptFile, fileArgs)
+	//response = untarScriptIntoDirExcute(ctx, sde.channel, scriptFile, fileArgs, uid)
 	if !response.Success {
 		sde.stop(ctx, scriptFile)
 	}
 
-	os.RemoveAll(tarDistDir)
+	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar
+	//tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
+	//UnTar(scriptFile, tarDistDir)
+	////判断有没有main主文件，没有直接返错误
+	//scriptMain := tarDistDir + "/main"
+	//if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
+	//	response.Success = false
+	//	response.Code = 45000
+	//	response.Result = "script files must contain main file"
+	//	return response
+	//}
+	//cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
+	//output0, err := cmd.CombinedOutput()
+	//var errOsExecInfo string
+	//if err != nil {
+	//	errOsExecInfo = fmt.Sprintf("os.exec.Command chmod  scriptMain 777 failed  %s", err.Error()+string(output0))
+	//}
+
+	//录制script脚本执行过程
+	//time := "/tmp/" + uid + ".time"
+	//out := "/tmp/" + uid + ".out"
+	//if runtime.GOOS == "darwin" {
+	//	scriptMain = "script  -t 2>" + time + " -a " + out + " " + scriptMain
+	//} else {
+	//	scriptMain = "script  -t 2>" + time + " -a " + out + "  -c  " + "\"" + scriptMain
+	//	fileArgs += "\""
+	//}
+	//response = insertContentToScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
+	//if !response.Success {
+	//	sde.stop(ctx, scriptFile)
+	//}
+
+	//os.RemoveAll(tarDistDir)
 
 	var errInfo, errUploadInfo string
 	//todo 有需要再放开
@@ -187,8 +192,10 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	//	errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
 	//}
 	//timeResult := string(timeContent)
-	//uploadUrl不为空说明是主机上演练,录制文件存调用商场接口回传
+	//uploadUrl不为空说明是主机上演练,录制文件存调用上传接口回传
+
 	if uploadUrl != "" {
+		out := "/tmp/" + uid + ".out"
 		outContent, err := ioutil.ReadFile(out)
 		if err != nil {
 			errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
@@ -203,7 +210,7 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	}
 	var newResult = make(map[string]interface{})
 	newResult["errInfo"] = errInfo
-	newResult["errOsExecInfo"] = errOsExecInfo
+	//newResult["errOsExecInfo"] = errOsExecInfo
 	newResult["errUploadInfo"] = errUploadInfo
 	newResult["outMsg"] = response.Result
 	response.Result = newResult

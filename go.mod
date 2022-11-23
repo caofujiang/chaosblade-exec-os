@@ -14,4 +14,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/chaosblade-io/chaosblade-spec-go v1.7.0 => github.com/caofujiang/chaosblade-spec-go v1.7.0
+replace github.com/chaosblade-io/chaosblade-spec-go v1.7.0 => github.com/caofujiang/chaosblade-spec-go v1.7.4
