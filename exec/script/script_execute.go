@@ -216,15 +216,7 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		newResult["errUploadInfo"] = errUploadInfo
 		newResult["outMsg"] = response.Result
 		response.Result = newResult
-
 	}
-	//else {
-	//	//在k8s集群演练
-	//	response = untarScriptIntoDirExcute(ctx, sde.channel, scriptFile, fileArgs, uid)
-	//	if !response.Success {
-	//		sde.stop(ctx, scriptFile)
-	//	}
-	//}
 	return response
 }
 
