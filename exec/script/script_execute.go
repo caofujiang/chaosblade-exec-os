@@ -165,12 +165,16 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	//UnTar(scriptFile, tarDistDir)
 	//判断有没有main主文件，没有直接返错误
 	scriptMain := tarDistDir + "/main"
-	if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
-		response.Success = false
-		response.Code = 45000
-		response.Result = "script files must contain main file"
-		return response
+	if !exec.CheckFilepathExists(ctx, sde.channel, scriptMain) {
+		log.Errorf(ctx, "`%s`,main file is not exist in tar", scriptMain)
+		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main file", scriptMain, "it is not found in tar")
 	}
+	//if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
+	//	response.Success = false
+	//	response.Code = 45000
+	//	response.Result = "script files must contain main file"
+	//	return response
+	//}
 	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {
 		sde.stop(ctx, scriptMain)
 	}
