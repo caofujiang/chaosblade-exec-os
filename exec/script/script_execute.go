@@ -31,7 +31,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	osexec "os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -101,7 +100,7 @@ func (*ScripExecuteExecutor) Name() string {
 }
 
 func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
-	commands := []string{"cat", "rm", "sed", "awk", "rm"}
+	commands := []string{"cat", "rm", "sed", "awk", "rm", "tar"}
 	if response, ok := sde.channel.IsAllCommandsAvailable(ctx, commands); !ok {
 		return response
 	}
@@ -146,10 +145,24 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		return response
 	}
+
+	//os.RemoveAll(tarDistDir)
+	//todo 有需要再放开
+	//timeContent, err := ioutil.ReadFile(time)
+	//if err != nil {
+	//	errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
+	//}
+	//timeResult := string(timeContent)
+
 	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar
 	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
-	UnTar(scriptFile, tarDistDir)
-
+	if response = sde.channel.Run(ctx, "mkdir", fmt.Sprintf(`-p %s`, tarDistDir)); !response.Success {
+		sde.stop(ctx, scriptFile)
+	}
+	if response = sde.channel.Run(ctx, "tar", fmt.Sprintf(`-xvf %s -C  %s`, scriptFile, tarDistDir)); !response.Success {
+		sde.stop(ctx, tarDistDir)
+	}
+	//UnTar(scriptFile, tarDistDir)
 	//判断有没有main主文件，没有直接返错误
 	scriptMain := tarDistDir + "/main"
 	if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
@@ -158,12 +171,16 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		response.Result = "script files must contain main file"
 		return response
 	}
-	cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
-	output0, err := cmd.CombinedOutput()
-	var errOsExecInfo string
-	if err != nil {
-		errOsExecInfo = fmt.Sprintf("os.exec.Command chmod  scriptMain 777 failed  %s", err.Error()+string(output0))
+	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {
+		sde.stop(ctx, scriptMain)
 	}
+	//cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
+	//output0, err := cmd.CombinedOutput()
+	//var errOsExecInfo string
+	//if err != nil {
+	//	errOsExecInfo = fmt.Sprintf("os.exec.Command chmod  scriptMain 777 failed  %s", err.Error()+string(output0))
+	//}
+
 	//录制script脚本执行过程
 	time := "/tmp/" + uid + ".time"
 	out := "/tmp/" + uid + ".out"
@@ -175,20 +192,12 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	}
 	response = insertContentToScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
 	if !response.Success {
-		sde.stop(ctx, scriptFile)
+		sde.stop(ctx, scriptMain)
 	}
 
-	os.RemoveAll(tarDistDir)
-
 	var errInfo, errUploadInfo string
-	//todo 有需要再放开
-	//timeContent, err := ioutil.ReadFile(time)
-	//if err != nil {
-	//	errInfo = fmt.Sprintf("os.ReadFile:script-time failed  %s", err.Error())
-	//}
-	//timeResult := string(timeContent)
-	//uploadUrl不为空说明是主机上演练,录制文件存调用商场接口回传
-	if uploadUrl != "" {
+	if uploadUrl != "" { //物理主机上传脚本执行过程
+		out = "/tmp/" + uid + ".out"
 		outContent, err := ioutil.ReadFile(out)
 		if err != nil {
 			errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
@@ -200,13 +209,14 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		if err != nil {
 			errUploadInfo = fmt.Sprintf("uploadFile script-out failed  %s", err.Error())
 		}
+
+		var newResult = make(map[string]interface{})
+		newResult["errInfo"] = errInfo
+		//newResult["errOsExecInfo"] = errOsExecInfo
+		newResult["errUploadInfo"] = errUploadInfo
+		newResult["outMsg"] = response.Result
+		response.Result = newResult
 	}
-	var newResult = make(map[string]interface{})
-	newResult["errInfo"] = errInfo
-	newResult["errOsExecInfo"] = errOsExecInfo
-	newResult["errUploadInfo"] = errUploadInfo
-	newResult["outMsg"] = response.Result
-	response.Result = newResult
 	return response
 }
 

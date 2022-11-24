@@ -116,10 +116,6 @@ func insertContentToScriptBy(ctx context.Context, channel spec.Channel, function
 	return channel.Run(ctx, "sed", fmt.Sprintf(`-i '%s a %s' %s`, lineNum, newContent, scriptFile))
 }
 
-
-func insertContentToScriptByExecute(ctx context.Context, channel spec.Channel, scriptFile,fileArgs string) *spec.Response {
-	return channel.Run(ctx, "", fmt.Sprintf(`%s %s`, scriptFile,fileArgs))
+func insertContentToScriptByExecute(ctx context.Context, channel spec.Channel, scriptFile, fileArgs string) *spec.Response {
+	return channel.Run(ctx, "", fmt.Sprintf(`%s %s`, scriptFile, fileArgs))
 }
-
-
-
