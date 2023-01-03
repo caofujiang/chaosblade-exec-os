@@ -35,7 +35,7 @@ func NewStopProcessActionCommandSpec() spec.ExpActionCommandSpec {
 			ActionMatchers: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name: "process",
-					Desc: "Process name",
+					Desc: "Process name,Separate multiple process with commas (,)",
 				},
 				&spec.ExpFlag{
 					Name: "process-cmd",
@@ -66,7 +66,7 @@ func NewStopProcessActionCommandSpec() spec.ExpActionCommandSpec {
 			ActionExecutor: &StopProcessExecutor{},
 			ActionExample: `
 # Pause the process that contains the "SimpleHTTPServer" keyword
-blade create process stop --process SimpleHTTPServer
+blade create process stop --process SimpleHTTPServer,top
 
 # Pause the Java process
 blade create process stop --process-cmd java

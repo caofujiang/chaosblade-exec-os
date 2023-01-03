@@ -44,5 +44,6 @@ func GetAllExpModels() []spec.ExpModelCommandSpec {
 		kernel.NewKernelInjectCommandSpec(),
 		systemd.NewSystemdCommandModelSpec(),
 		time.NewTimeCommandSpec(),
+		http.NewHttpCommandModelSpec(),
 	}
 }
