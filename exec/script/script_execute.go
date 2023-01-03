@@ -145,8 +145,6 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		return response
 	}
-
-	//os.RemoveAll(tarDistDir)
 	//todo 有需要再放开
 	//timeContent, err := ioutil.ReadFile(time)
 	//if err != nil {
@@ -169,22 +167,9 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 		log.Errorf(ctx, "`%s`,main file is not exist in tar", scriptMain)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main file", scriptMain, "it is not found in tar")
 	}
-	//if _, err := os.Stat(scriptMain); os.IsNotExist(err) {
-	//	response.Success = false
-	//	response.Code = 45000
-	//	response.Result = "script files must contain main file"
-	//	return response
-	//}
 	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {
 		sde.stop(ctx, scriptMain)
 	}
-	//cmd := osexec.Command("sh", "-c", "chmod 777 "+scriptMain)
-	//output0, err := cmd.CombinedOutput()
-	//var errOsExecInfo string
-	//if err != nil {
-	//	errOsExecInfo = fmt.Sprintf("os.exec.Command chmod  scriptMain 777 failed  %s", err.Error()+string(output0))
-	//}
-
 	//录制script脚本执行过程
 	time := "/tmp/" + uid + ".time"
 	out := "/tmp/" + uid + ".out"
@@ -198,7 +183,7 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	if !response.Success {
 		sde.stop(ctx, scriptMain)
 	}
-
+	//os.RemoveAll(tarDistDir)
 	var errInfo, errUploadInfo string
 	if uploadUrl != "" { //物理主机上传脚本执行过程
 		out = "/tmp/" + uid + ".out"
