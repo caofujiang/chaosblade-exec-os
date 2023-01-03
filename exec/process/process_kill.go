@@ -36,7 +36,7 @@ func NewKillProcessActionCommandSpec() spec.ExpActionCommandSpec {
 			ActionMatchers: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name: "process",
-					Desc: "Process name",
+					Desc: "Process name, Separate multiple process with commas (,)",
 				},
 				&spec.ExpFlag{
 					Name: "process-cmd",
@@ -67,7 +67,7 @@ func NewKillProcessActionCommandSpec() spec.ExpActionCommandSpec {
 			ActionExecutor: &KillProcessExecutor{},
 			ActionExample: `
 # Kill the process that contains the SimpleHTTPServer keyword
-blade create process kill --process SimpleHTTPServer
+blade create process kill --process SimpleHTTPServer,top
 
 # Kill the Java process
 blade create process kill --process-cmd java

@@ -112,9 +112,13 @@ func getPids(ctx context.Context, cl spec.Channel, model *spec.ExpModel, uid str
 	var killProcessName string
 	ctx = context.WithValue(ctx, channel.ExcludeProcessKey, excludeProcessValue)
 	if process != "" {
-		pids, err = cl.GetPidsByProcessName(process, ctx)
-		if err != nil {
-			return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("get pids by processname err, %v", err))
+		processNames := strings.Split(process, ",")
+		for _, v := range processNames {
+			pidsTemp, err := cl.GetPidsByProcessName(v, ctx)
+			if err != nil {
+				return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("get pids by processname err, %v", err))
+			}
+			pids = append(pids, pidsTemp...)
 		}
 		killProcessName = process
 	} else if processCmd != "" {
@@ -156,10 +160,13 @@ func checkProcessInvalid(ctx context.Context, process, processCmd, localPorts, p
 	var err error
 	var processParameter string
 	if process != "" {
-		pids, err = cl.GetPidsByProcessName(process, ctx)
-		if err != nil {
-			log.Errorf(ctx, spec.ProcessIdByNameFailed.Sprintf(process, err))
-			return spec.ResponseFailWithFlags(spec.ProcessIdByNameFailed, process, err)
+		processNames := strings.Split(process, ",")
+		for _, v := range processNames {
+			pids, err = cl.GetPidsByProcessName(v, ctx)
+			if err != nil {
+				log.Errorf(ctx, spec.ProcessIdByNameFailed.Sprintf(process, err))
+				return spec.ResponseFailWithFlags(spec.ProcessIdByNameFailed, process, err)
+			}
 		}
 		killProcessName = process
 		processParameter = "process"
