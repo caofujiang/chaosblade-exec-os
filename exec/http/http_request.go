@@ -38,7 +38,7 @@ func NewRequestHttpActionCommandSpec() spec.ExpActionCommandSpec {
 
 			ActionExample: `
 # Create a http2 10000(10s) delay experiment "
-blade create http2 request --url https://www.taobao.com -cout 10`,
+blade create http2 request --url https://www.taobao.com --count 10`,
 			ActionExecutor:   &HttpRequestExecutor{},
 			ActionCategories: []string{category.SystemHttp},
 		},
