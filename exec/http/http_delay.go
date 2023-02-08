@@ -102,7 +102,7 @@ func (impl *HttpDelayExecutor) Exec(uid string, ctx context.Context, model *spec
 	t1, err := strconv.Atoi(t)
 	if err != nil {
 		log.Errorf(ctx, "time %v it must be a positive integer", t1)
-		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "time", t1, "time must be a positive integer")
+		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "time", t1, "time must be a positive integer")
 	}
 
 	return impl.start(ctx, urlStr, t1)
