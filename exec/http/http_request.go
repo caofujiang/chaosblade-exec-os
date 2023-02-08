@@ -3,15 +3,14 @@ package http
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/chaosblade-io/chaosblade-exec-os/exec"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"strconv"
-	"strings"
 )
-
-const Http2RequestBin = "chaos_httprequest"
 
 type RequestHttpActionCommandSpec struct {
 	spec.BaseExpActionCommandSpec
@@ -37,8 +36,8 @@ func NewRequestHttpActionCommandSpec() spec.ExpActionCommandSpec {
 			},
 
 			ActionExample: `
-# Create a http2 10000(10s) delay experiment "
-blade create http2 request --url https://www.taobao.com -cout 10`,
+# Create a http2 10000(10s) count request experiment
+blade create http2 request --url https://www.taobao.com --count 10`,
 			ActionExecutor:   &HttpRequestExecutor{},
 			ActionCategories: []string{category.SystemHttp},
 		},
@@ -122,14 +121,12 @@ func (impl *HttpRequestExecutor) start(ctx context.Context, url string, c int) *
 		response = impl.channel.Run(ctx, "curl", fmt.Sprintf("%s", url))
 		val = append(val, response.Result)
 	}
-	response.Result = val
-	response.Success = true
-	response.Code = 45000
-	return response
-
+	if response == nil {
+		return spec.ResponseFailWithFlags(spec.ActionNotSupport, "response-nil")
+	}
+	return spec.ReturnSuccess(val)
 }
 
 func (impl *HttpRequestExecutor) stop(ctx context.Context, uid string) *spec.Response {
-	//ctx = context.WithValue(ctx, "bin", Http2RequestBin)
 	return exec.Destroy(ctx, impl.channel, uid)
 }

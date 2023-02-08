@@ -2,6 +2,9 @@ package http
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -11,8 +14,6 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
-
-const Http2DelayBin = "chaos_httpdelay"
 
 type DelayHttpActionCommandSpec struct {
 	spec.BaseExpActionCommandSpec
@@ -35,10 +36,21 @@ func NewDelayHttpActionCommandSpec() spec.ExpActionCommandSpec {
 					Desc:     "sleep time, unit is millisecond",
 					Required: true,
 				},
+				&spec.ExpFlag{
+					Name:     "target",
+					Desc:     "HTTP target: Request or Response",
+					Required: true,
+				},
 			},
 			ActionExample: `
-# Create a http2 10000(10s) delay experiment "
-blade create http2 delay --url https://www.taobao.com --time 10000`,
+# Create a http2 10000(10s) delay experiment
+blade create http2 delay --url https://www.taobao.com --time 10000
+
+# Create a http2 10000(10s) delay request
+blade create http2 delay --url https://www.taobao.com --target request --time 10000
+
+# Create a http2 10000(10s) delay response
+blade create http2 delay --url https://www.taobao.com --target response --time 10000`,
 			ActionExecutor:   &HttpDelayExecutor{},
 			ActionCategories: []string{category.SystemHttp},
 		},
@@ -102,18 +114,73 @@ func (impl *HttpDelayExecutor) Exec(uid string, ctx context.Context, model *spec
 	t1, err := strconv.Atoi(t)
 	if err != nil {
 		log.Errorf(ctx, "time %v it must be a positive integer", t1)
-		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "time", t1, "time must be a positive integer")
+		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "time", t1, "time must be a positive integer")
 	}
 
-	return impl.start(ctx, urlStr, t1)
+	target := model.ActionFlags["target"]
+	return impl.start(ctx, urlStr, t1, target)
 }
 
-func (impl *HttpDelayExecutor) start(ctx context.Context, url string, t int) *spec.Response {
+func (impl *HttpDelayExecutor) start(ctx context.Context, url string, t int, target string) *spec.Response {
+	switch target {
+	case "request":
+		return impl.GetTargetRequestDelay(ctx, url, t, target)
+	case "response":
+		return impl.GetTargetresponseDelay(ctx, url, t, target)
+	default:
+		time.Sleep(time.Duration(t) * time.Millisecond)
+		return impl.channel.Run(ctx, "curl", url)
+	}
+}
+
+func (impl *HttpDelayExecutor) GetTargetRequestDelay(ctx context.Context, url string, t int, target string) *spec.Response {
 	time.Sleep(time.Duration(t) * time.Millisecond)
-	return impl.channel.Run(ctx, "curl", url)
+	client := http.Client{}
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Errorf(ctx, "request-url-failed", err)
+		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get Request failed %s ", target))
+	}
+	defer resp.Body.Close()
+
+	if resp != nil {
+		if resp.StatusCode == 200 {
+			return spec.ReturnSuccess(resp.StatusCode)
+		}
+	}
+	return spec.ReturnFail(spec.ParameterRequestFailed, fmt.Sprintf("get response failed %s ", resp.StatusCode))
+}
+
+func (impl *HttpDelayExecutor) GetTargetresponseDelay(ctx context.Context, url string, t int, target string) *spec.Response {
+	client := http.Client{}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Errorf(ctx, "get-request-url-failed", err)
+		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get Request failed %s ", target))
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Errorf(ctx, "get-client-url-failed", err)
+		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client Request failed %s ", target))
+	}
+	defer resp.Body.Close()
+	time.Sleep(time.Duration(t) * time.Millisecond)
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf(ctx, "Failed to read response body", err)
+		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client response body failed %s ", target))
+	}
+
+	if resp != nil {
+		if resp.StatusCode == 200 {
+			log.Infof(ctx, "get the body data", body)
+			return spec.ReturnSuccess(resp.StatusCode)
+		}
+	}
+	return spec.ReturnFail(spec.ParameterRequestFailed, fmt.Sprintf("get response failed %s ", resp.StatusCode))
 }
 
 func (impl *HttpDelayExecutor) stop(ctx context.Context, uid string) *spec.Response {
-	//ctx = context.WithValue(ctx, "bin", Http2DelayBin)
 	return exec.Destroy(ctx, impl.channel, uid)
 }
