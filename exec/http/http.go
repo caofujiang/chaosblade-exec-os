@@ -15,6 +15,7 @@ func NewHttpCommandModelSpec() spec.ExpModelCommandSpec {
 			ExpActions: []spec.ExpActionCommandSpec{
 				NewDelayHttpActionCommandSpec(),
 				NewRequestHttpActionCommandSpec(),
+				NewTimeOutHttpActionCommandSpec(),
 			},
 		},
 	}
