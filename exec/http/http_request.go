@@ -122,11 +122,10 @@ func (impl *HttpRequestExecutor) start(ctx context.Context, url string, c int) *
 		response = impl.channel.Run(ctx, "curl", fmt.Sprintf("%s", url))
 		val = append(val, response.Result)
 	}
-	response.Result = val
-	response.Success = true
-	response.Code = 45000
-	return response
-
+	if response == nil {
+		return spec.ResponseFailWithFlags(spec.ActionNotSupport, "response-nil")
+	}
+	return spec.ReturnSuccess(val)
 }
 
 func (impl *HttpRequestExecutor) stop(ctx context.Context, uid string) *spec.Response {
