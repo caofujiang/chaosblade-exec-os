@@ -123,58 +123,44 @@ func (impl *HttpDelayExecutor) Exec(uid string, ctx context.Context, model *spec
 
 func (impl *HttpDelayExecutor) start(ctx context.Context, url string, t int, target string) *spec.Response {
 	switch target {
-	case "request":
-		return impl.GetTargetRequestDelay(ctx, url, t, target)
-	case "response":
-		return impl.GetTargetresponseDelay(ctx, url, t, target)
+	case "request", "response":
+		return impl.GetTargetDelay(ctx, url, t, target)
 	default:
 		time.Sleep(time.Duration(t) * time.Millisecond)
 		return impl.channel.Run(ctx, "curl", url)
 	}
 }
 
-func (impl *HttpDelayExecutor) GetTargetRequestDelay(ctx context.Context, url string, t int, target string) *spec.Response {
-	time.Sleep(time.Duration(t) * time.Millisecond)
-	client := http.Client{}
-	resp, err := client.Get(url)
-	if err != nil {
-		log.Errorf(ctx, "request-url-failed", err)
-		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get Request failed %s ", target))
-	}
-	defer resp.Body.Close()
-
-	if resp != nil {
-		if resp.StatusCode == 200 {
-			return spec.ReturnSuccess(resp.StatusCode)
-		}
-	}
-	return spec.ReturnFail(spec.ParameterRequestFailed, fmt.Sprintf("get response failed %s ", resp.StatusCode))
-}
-
-func (impl *HttpDelayExecutor) GetTargetresponseDelay(ctx context.Context, url string, t int, target string) *spec.Response {
+func (impl *HttpDelayExecutor) GetTargetDelay(ctx context.Context, url string, t int, target string) *spec.Response {
 	client := http.Client{}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		log.Errorf(ctx, "get-request-url-failed", err)
 		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get Request failed %s ", target))
 	}
+	duration := time.Duration(t) * time.Millisecond
+	if target == "request" {
+		time.Sleep(duration)
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Errorf(ctx, "get-client-url-failed", err)
 		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client Request failed %s ", target))
 	}
 	defer resp.Body.Close()
-	time.Sleep(time.Duration(t) * time.Millisecond)
+	if target == "response" {
+		time.Sleep(duration)
+	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorf(ctx, "Failed to read response body", err)
-		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client response body failed %s ", target))
+		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client response body failed %s ", string(body)))
 	}
 
 	if resp != nil {
 		if resp.StatusCode == 200 {
-			log.Infof(ctx, "get the body data", body)
 			return spec.ReturnSuccess(resp.StatusCode)
 		}
 	}
