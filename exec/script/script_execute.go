@@ -66,7 +66,7 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 			ActionExecutor: &ScripExecuteExecutor{},
 			ActionExample: `
 # Add commands to the execute script "
-blade create script execute --file test.sh --file-args this:is:file:args:string --dsn root:Spx#123456@tcp(10.148.55.116:3306)/blade_ops`,
+create script execute --file=/Users/admin/tar_file/main11.tar --file-args=aaa:bbb:ccc --downloadUrl=http://10.148.55.113:8080/chaosblade-cps/script/download/host-main-1669186308408.tar --uploadUrl=http://10.148.55.113:8080/chaosblade-cps/script/upload`,
 			ActionCategories: []string{category.SystemScript},
 		},
 	}
