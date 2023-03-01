@@ -24,22 +24,21 @@ func NewDelayHttpActionCommandSpec() spec.ExpActionCommandSpec {
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
-					Name:                  "url",
-					Desc:                  "The Url of the target http2",
-					Required:              true,
-					RequiredWhenDestroyed: true,
+					Name:     "url",
+					Desc:     "The Url of the target http2",
+					Required: true,
 				},
 			},
 			ActionFlags: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name:     "time",
 					Desc:     "sleep time, unit is millisecond",
-					Required: true,
+					Required: false,
 				},
 				&spec.ExpFlag{
 					Name:     "target",
 					Desc:     "HTTP target: Request or Response",
-					Required: true,
+					Required: false,
 				},
 			},
 			ActionExample: `

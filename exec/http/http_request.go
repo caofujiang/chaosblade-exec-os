@@ -21,17 +21,16 @@ func NewRequestHttpActionCommandSpec() spec.ExpActionCommandSpec {
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
-					Name:                  "url",
-					Desc:                  "The Url of the target http2",
-					Required:              true,
-					RequiredWhenDestroyed: true,
+					Name:     "url",
+					Desc:     "The Url of the target http2",
+					Required: true,
 				},
 			},
 			ActionFlags: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name:     "count",
 					Desc:     "request the url to count",
-					Required: true,
+					Required: false,
 				},
 			},
 
