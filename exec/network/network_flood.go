@@ -22,7 +22,6 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/process"
-	"io/fs"
 	"net"
 	"strings"
 
@@ -150,7 +149,7 @@ func (ns *NetworkFloodExecutor) flood(ctx context.Context) *spec.Response {
 		if strings.Contains(pName, "iperf") {
 			proc, err := process.NewProcess(pid)
 			if err != nil {
-				if errors.Is(err, process.ErrorProcessNotRunning) || errors.Is(err, fs.ErrNotExist) {
+				if errors.Is(err, process.ErrorProcessNotRunning) {
 					log.Errorf(ctx, "Failed to get iperf process", err.Error())
 					response.Success = false
 					response.Result = fmt.Sprintf("Failed to get iperf process %s", err.Error())

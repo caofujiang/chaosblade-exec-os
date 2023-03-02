@@ -38,12 +38,12 @@ import (
 	"time"
 )
 
-type ScripExecuteActionCommand struct {
+type ScriptExecuteActionCommand struct {
 	spec.BaseExpActionCommandSpec
 }
 
 func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
-	return &ScripExecuteActionCommand{
+	return &ScriptExecuteActionCommand{
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{},
 			ActionFlags: []spec.ExpFlagSpec{
@@ -63,7 +63,7 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 					Required: false,
 				},
 			},
-			ActionExecutor: &ScripExecuteExecutor{},
+			ActionExecutor: &ScriptExecuteExecutor{},
 			ActionExample: `
 # Add commands to the execute script "
 create script execute --file=/Users/admin/tar_file/main11.tar --file-args=aaa:bbb:ccc --downloadUrl=http://10.148.55.113:8080/chaosblade-cps/script/download/host-main-1669186308408.tar --uploadUrl=http://10.148.55.113:8080/chaosblade-cps/script/upload`,
@@ -72,34 +72,34 @@ create script execute --file=/Users/admin/tar_file/main11.tar --file-args=aaa:bb
 	}
 }
 
-func (*ScripExecuteActionCommand) Name() string {
+func (*ScriptExecuteActionCommand) Name() string {
 	return "execute"
 }
 
-func (*ScripExecuteActionCommand) Aliases() []string {
+func (*ScriptExecuteActionCommand) Aliases() []string {
 	return []string{}
 }
 
-func (*ScripExecuteActionCommand) ShortDesc() string {
+func (*ScriptExecuteActionCommand) ShortDesc() string {
 	return "Script execute"
 }
 
-func (s *ScripExecuteActionCommand) LongDesc() string {
+func (s *ScriptExecuteActionCommand) LongDesc() string {
 	if s.ActionLongDesc != "" {
 		return s.ActionLongDesc
 	}
 	return "Execute script"
 }
 
-type ScripExecuteExecutor struct {
+type ScriptExecuteExecutor struct {
 	channel spec.Channel
 }
 
-func (*ScripExecuteExecutor) Name() string {
+func (*ScriptExecuteExecutor) Name() string {
 	return "execute"
 }
 
-func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
+func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
 	commands := []string{"cat", "rm", "sed", "awk", "rm", "tar"}
 	if response, ok := sde.channel.IsAllCommandsAvailable(ctx, commands); !ok {
 		return response
@@ -139,7 +139,7 @@ func (sde *ScripExecuteExecutor) Exec(uid string, ctx context.Context, model *sp
 	return sde.start(ctx, scriptFile, fileArgs, uploadUrl, uid)
 }
 
-func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, uploadUrl, uid string) *spec.Response {
+func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, uploadUrl, uid string) *spec.Response {
 	// backup file
 	response := backScript(ctx, sde.channel, scriptFile)
 	if !response.Success {
@@ -209,11 +209,11 @@ func (sde *ScripExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs
 	return response
 }
 
-func (sde *ScripExecuteExecutor) stop(ctx context.Context, scriptFile string) *spec.Response {
+func (sde *ScriptExecuteExecutor) stop(ctx context.Context, scriptFile string) *spec.Response {
 	return recoverScript(ctx, sde.channel, scriptFile)
 }
 
-func (sde *ScripExecuteExecutor) SetChannel(channel spec.Channel) {
+func (sde *ScriptExecuteExecutor) SetChannel(channel spec.Channel) {
 	sde.channel = channel
 }
 
