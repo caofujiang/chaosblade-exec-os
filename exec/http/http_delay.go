@@ -39,7 +39,7 @@ func NewDelayHttpActionCommandSpec() spec.ExpActionCommandSpec {
 				&spec.ExpFlag{
 					Name:     "target",
 					Desc:     "HTTP target: Request or Response",
-					Required: true,
+					Required: false,
 				},
 			},
 			ActionExample: `
@@ -138,9 +138,9 @@ func (impl *HttpDelayExecutor) GetTargetDelay(ctx context.Context, url string, t
 		log.Errorf(ctx, "get-request-url-failed", err)
 		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get Request failed %s ", target))
 	}
-
+	duration := time.Duration(t) * time.Millisecond
 	if target == "request" {
-		time.Sleep(time.Duration(t) * time.Millisecond)
+		time.Sleep(duration)
 	}
 
 	resp, err := client.Do(req)
@@ -150,18 +150,17 @@ func (impl *HttpDelayExecutor) GetTargetDelay(ctx context.Context, url string, t
 	}
 	defer resp.Body.Close()
 	if target == "response" {
-		time.Sleep(time.Duration(t) * time.Millisecond)
+		time.Sleep(duration)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorf(ctx, "Failed to read response body", err)
-		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client response body failed %s ", target))
+		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client response body failed %s ", string(body)))
 	}
 
 	if resp != nil {
 		if resp.StatusCode == 200 {
-			log.Infof(ctx, "get the body data", body)
 			return spec.ReturnSuccess(resp.StatusCode)
 		}
 	}
