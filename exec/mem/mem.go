@@ -202,10 +202,7 @@ func (ce *memExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 	burnMemModeStr := model.ActionFlags["mode"]
 	includeBufferCache := model.ActionFlags["include-buffer-cache"] == "true"
 	avoidBeingKilled := model.ActionFlags["avoid-being-killed"] == "true"
-	// 256G true/false
 	bigMem := model.ActionFlags["big-mem"] == "true"
-
-	fmt.Println("bigMem======", bigMem)
 
 	var err error
 	if memPercentStr != "" {
@@ -239,9 +236,10 @@ func (ce *memExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 	return spec.Success()
 }
 
-// 128K  4096 * 2 = 8192
 type (
-	Block  [32 * 1024]int32
+	// 128K
+	Block [32 * 1024]int32
+	// 8192K
 	Blocks [2048 * 1024]int32
 )
 
