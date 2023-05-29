@@ -62,6 +62,11 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 					Desc:     "upload-url, a url string can upload script excute outfile",
 					Required: false,
 				},
+				&spec.ExpFlag{
+					Name:     "recover",
+					Desc:     "recover, a  string describe to contain recover script",
+					Required: false,
+				},
 			},
 			ActionExecutor: &ScriptExecuteExecutor{},
 			ActionExample: `
@@ -107,6 +112,13 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 	downloadUrl := model.ActionFlags["downloadUrl"]
 	uploadUrl := model.ActionFlags["uploadUrl"]
 	scriptFile := model.ActionFlags["file"]
+	fileArgs := model.ActionFlags["file-args"]
+	if fileArgs != "" {
+		ret := strings.Split(fileArgs, ":")
+		fileArgs = strings.Join(ret, " ")
+	}
+	//是否执行恢复脚本
+	recover := model.ActionFlags["recover"]
 	if downloadUrl != "" { //host模式
 		if scriptFile != "" {
 			_, fileName := filepath.Split(scriptFile)
@@ -128,18 +140,14 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 		log.Errorf(ctx, "`%s`, file is invalid. it not found", scriptFile)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "file", scriptFile, "it is not found")
 	}
-	fileArgs := model.ActionFlags["file-args"]
-	if fileArgs != "" {
-		ret := strings.Split(fileArgs, ":")
-		fileArgs = strings.Join(ret, " ")
-	}
+
 	if _, ok := spec.IsDestroy(ctx); ok {
 		return sde.stop(ctx, scriptFile)
 	}
-	return sde.start(ctx, scriptFile, fileArgs, uploadUrl, uid)
+	return sde.start(ctx, scriptFile, fileArgs, uploadUrl, uid, recover)
 }
 
-func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, uploadUrl, uid string) *spec.Response {
+func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, uploadUrl, uid, recover string) *spec.Response {
 	// backup file
 	response := backScript(ctx, sde.channel, scriptFile)
 	if !response.Success {
@@ -162,7 +170,13 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 	}
 	//UnTar(scriptFile, tarDistDir)
 	//判断有没有main主文件，没有直接返错误
-	scriptMain := tarDistDir + "/main"
+	var scriptMain string
+
+	if recover == "true" {
+		scriptMain = tarDistDir + "/recover.sh"
+	} else {
+		scriptMain = tarDistDir + "/main"
+	}
 	if !exec.CheckFilepathExists(ctx, sde.channel, scriptMain) {
 		log.Errorf(ctx, "`%s`,main file is not exist in tar", scriptMain)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main file", scriptMain, "it is not found in tar")
@@ -170,6 +184,7 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {
 		sde.stop(ctx, scriptMain)
 	}
+
 	//录制script脚本执行过程
 	time := "/tmp/" + uid + ".time"
 	out := "/tmp/" + uid + ".out"
