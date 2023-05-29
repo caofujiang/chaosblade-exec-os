@@ -52,6 +52,9 @@ func NewMemCommandModelSpec() spec.ExpModelCommandSpec {
 # The execution memory footprint is 50%
 blade create mem load --mode ram --mem-percent 50
 
+# The execution big memory footprint is 50%
+blade create mem load --mode ram --mem-percent 50 --big-mem
+
 # The execution memory footprint is 50%, cache model
 blade create mem load --mode cache --mem-percent 50
 
@@ -101,6 +104,11 @@ blade create mem load --mode ram --reserve 200 --rate 100`,
 				&spec.ExpFlag{
 					Name:   "avoid-being-killed",
 					Desc:   "Prevent mem-burn process from being killed by oom-killer",
+					NoArgs: true,
+				},
+				&spec.ExpFlag{
+					Name:   "big-mem",
+					Desc:   "big memory for machine",
 					NoArgs: true,
 				},
 				&spec.ExpFlag{
@@ -239,8 +247,8 @@ func (ce *memExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 type (
 	// 128K
 	Block [32 * 1024]int32
-	// 8192K
-	Blocks [2048 * 1024]int32
+	// 49152K
+	Blocks [12288 * 1024]int32
 )
 
 const PageCounterMax uint64 = 9223372036854770000
