@@ -20,6 +20,7 @@ import (
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/cpu"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/disk"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/file"
+	"github.com/chaosblade-io/chaosblade-exec-os/exec/host"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/http"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/mem"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/network"
@@ -40,5 +41,6 @@ func GetAllExpModels() []spec.ExpModelCommandSpec {
 		script.NewScriptCommandModelSpec(),
 		file.NewFileCommandSpec(),
 		http.NewHttpCommandModelSpec(),
+		host.NewHostCommandSpec(),
 	}
 }
