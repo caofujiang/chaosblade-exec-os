@@ -20,7 +20,6 @@ import (
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/cpu"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/disk"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/file"
-	"github.com/chaosblade-io/chaosblade-exec-os/exec/host"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/http"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/kernel"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/mem"
@@ -62,7 +61,6 @@ func getModels() *spec.Models {
 		systemd.NewSystemdCommandModelSpec(),
 		time.NewTimeCommandSpec(),
 		http.NewHttpCommandModelSpec(),
-		host.NewHostCommandSpec(),
 	}
 	specModels := make([]*spec.Models, 0)
 	for _, modeSpec := range modelCommandSpecs {
