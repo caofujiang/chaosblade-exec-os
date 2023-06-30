@@ -1,6 +1,6 @@
 module github.com/chaosblade-io/chaosblade-exec-os
 
-go 1.13
+go 1.20
 
 require (
 	github.com/chaosblade-io/chaosblade-spec-go v1.7.2
@@ -31,4 +31,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/chaosblade-io/chaosblade-spec-go v1.7.2 => github.com/caofujiang/chaosblade-spec-go v1.7.6
+replace github.com/chaosblade-io/chaosblade-spec-go v1.7.2 => github.com/caofujiang/chaosblade-spec-go v1.7.7
