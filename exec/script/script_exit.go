@@ -89,11 +89,11 @@ func (see *ScriptExitExecutor) Exec(uid string, ctx context.Context, model *spec
 
 	scriptFile := model.ActionFlags["file"]
 	if scriptFile == "" {
-		log.Errorf(ctx, "file is nil")
+		log.Errorf(ctx, "script-exit-exec-file is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "file")
 	}
 	if !exec.CheckFilepathExists(ctx, see.channel, scriptFile) {
-		log.Errorf(ctx, "`%s`, file is invalid. it not found", scriptFile)
+		log.Errorf(ctx, "script-exit-exec `%s`, file is invalid. it not found", scriptFile)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "file", scriptFile, "the file is not found")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -101,7 +101,7 @@ func (see *ScriptExitExecutor) Exec(uid string, ctx context.Context, model *spec
 	}
 	functionName := model.ActionFlags["function-name"]
 	if functionName == "" {
-		log.Errorf(ctx, "function-name is nil")
+		log.Errorf(ctx, "script-exit-exec-function-name is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "function-name")
 	}
 	exitMessage := model.ActionFlags["exit-message"]

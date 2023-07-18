@@ -118,7 +118,7 @@ func (fae *FillActionExecutor) Exec(uid string, ctx context.Context, model *spec
 		directory = path
 	}
 	if !util.IsDir(directory) {
-		log.Errorf(ctx,"`%s`: path is illegal, is not a directory", directory)
+		log.Errorf(ctx, "`%s`: disk-fill-exec-path is illegal, is not a directory", directory)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "path", directory, "it must be a directory")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -135,21 +135,21 @@ func (fae *FillActionExecutor) Exec(uid string, ctx context.Context, model *spec
 				}
 				_, err := strconv.Atoi(size)
 				if err != nil {
-					log.Errorf(ctx,"`%s`: size is illegal, it must be positive integer", size)
+					log.Errorf(ctx, "`%s`: disk-fill-exec-size is illegal, it must be positive integer", size)
 					return spec.ResponseFailWithFlags(spec.ParameterIllegal, "size", size, "it must be positive integer")
 				}
 				return fae.start(uid, directory, size, percent, reserve, retainHandle, ctx)
 			}
 			_, err := strconv.Atoi(reserve)
 			if err != nil {
-				log.Errorf(ctx,"`%s`: reserve is illegal, it must be positive integer", reserve)
+				log.Errorf(ctx, "`%s`: disk-fill-exec-reserve is illegal, it must be positive integer", reserve)
 				return spec.ResponseFailWithFlags(spec.ParameterIllegal, "reserve", reserve, "it must be positive integer")
 			}
 			return fae.start(uid, directory, "", percent, reserve, retainHandle, ctx)
 		}
 		_, err := strconv.Atoi(percent)
 		if err != nil {
-			log.Errorf(ctx,"`%s`: percent is illegal, it must be positive integer", percent)
+			log.Errorf(ctx, "`%s`: disk-fill-exec-percent is illegal, it must be positive integer", percent)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "percent", percent, "it must be positive integer")
 		}
 		return fae.start(uid, directory, "", percent, "", retainHandle, ctx)
@@ -176,7 +176,7 @@ func retainFileHandle(ctx context.Context, cl spec.Channel, fillDiskDirectory st
 	dataFilePath := path.Join(fillDiskDirectory, fillDataFile)
 	file, err := os.Open(dataFilePath)
 	if err != nil {
-		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("failed to read %s file, %s", dataFilePath, err.Error()))
+		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("disk-fill-retainFileHandle-failed to read %s file, %s", dataFilePath, err.Error()))
 	}
 	defer file.Close()
 	select {}
@@ -187,17 +187,17 @@ const diskFillErrorMessage = "No space left on device"
 func startFill(ctx context.Context, uid, directory, size, percent, reserve string, retainHandle bool, cl spec.Channel) *spec.Response {
 
 	if directory == "" {
-		log.Errorf(ctx, "`%s`: directory is nil", directory)
+		log.Errorf(ctx, "`%s`: disk-fill-startFill-directory is nil", directory)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "directory", directory, "directory is nil")
 	}
 	if size == "" && percent == "" && reserve == "" {
-		log.Errorf(ctx,"`%s`: less --size or --percent or --reserve flag", directory)
+		log.Errorf(ctx, "`%s`: disk-fill-startFill-less --size or --percent or --reserve flag", directory)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "directory", directory, "less --size or --percent or --reserve flag")
 	}
 	dataFile := path.Join(directory, fillDataFile)
 	size, err := calculateFileSize(ctx, directory, size, percent, reserve)
 	if err != nil {
-		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("calculate size err, %v", err))
+		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("disk-fill-startFill-calculate size err, %v", err))
 	}
 	var response *spec.Response
 	// Some normal filesystems (ext4, xfs, btrfs and ocfs2) tack quick works
@@ -219,7 +219,7 @@ func startFill(ctx context.Context, uid, directory, size, percent, reserve strin
 		return response
 	}
 	if err = stopFill(ctx, directory, cl); err != nil {
-		log.Warnf(ctx, "failed to stop fill when starting failed, %v, starting err: %s", err, response.Err)
+		log.Warnf(ctx, "disk-fill-startFill-failed to stop fill when starting failed, %v, starting err: %s", err, response.Err)
 	}
 	return response
 }
@@ -248,10 +248,10 @@ func calculateFileSize(ctx context.Context, directory, size, percent, reserve st
 		usedPercentage, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(usedBytes)/float64(allBytes)), 64)
 		expectedPercentage, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", float64(p)/100.0), 64)
 		if usedPercentage >= expectedPercentage {
-			return "", fmt.Errorf("the disk has been used %.2f, large than expected", usedPercentage)
+			return "", fmt.Errorf("disk-fill-calculateFileSize-the disk has been used %.2f, large than expected", usedPercentage)
 		}
 		remainderPercentage := expectedPercentage - usedPercentage
-		log.Debugf(ctx, "remainderPercentage: %f", remainderPercentage)
+		log.Debugf(ctx, "disk-fill-calculateFileSize-remainderPercentage: %f", remainderPercentage)
 		expectSize := math.Floor(remainderPercentage * float64(allBytes) / (1024.0 * 1024.0))
 		return fmt.Sprintf("%.f", expectSize), nil
 	} else {
@@ -261,7 +261,7 @@ func calculateFileSize(ctx context.Context, directory, size, percent, reserve st
 		}
 		availableMB := float64(availableBytes) / (1024.0 * 1024.0)
 		if availableMB <= r {
-			return "", fmt.Errorf("the disk has available size %.2f, less than expected", availableMB)
+			return "", fmt.Errorf("disk-fill-calculateFileSize-the disk has available size %.2f, less than expected", availableMB)
 		}
 		expectSize := math.Floor(availableMB - r)
 		return fmt.Sprintf("%.f", expectSize), nil
@@ -275,9 +275,9 @@ func fillDiskByFallocate(ctx context.Context, size string, dataFile string, cl s
 	}
 	// Need to judge that the disk is full or not. If the disk is full, return success
 	if strings.Contains(response.Err, diskFillErrorMessage) {
-		return spec.ReturnSuccess(fmt.Sprintf("success because of %s", diskFillErrorMessage))
+		return spec.ReturnSuccess(fmt.Sprintf("fillDiskByFallocate success because of %s", diskFillErrorMessage))
 	}
-	log.Warnf(ctx, "execute fallocate err, %s", response.Err)
+	log.Warnf(ctx, "disk-fill-fillDiskByFallocate execute fallocate err, %s", response.Err)
 	return spec.ResponseFailWithFlags(spec.OsCmdExecFailed, "fallocate", response.Err)
 }
 
@@ -292,21 +292,21 @@ func fillDiskByDD(ctx context.Context, dataFile string, directory string, size s
 		return response
 	}
 	return cl.Run(ctx, "nohup",
-		fmt.Sprintf(`dd if=/dev/zero of=%s bs=1M count=%s iflag=fullblock >/dev/null 2>&1 &`, dataFile, size))
+		fmt.Sprintf(`fillDiskByFallocate dd if=/dev/zero of=%s bs=1M count=%s iflag=fullblock >/dev/null 2>&1 &`, dataFile, size))
 }
 
 // stopFill contains kill the filldisk process and delete the temp file actions
 func stopFill(ctx context.Context, directory string, cl spec.Channel) *spec.Response {
 
 	if directory == "" {
-		log.Errorf(ctx, "`%s`: directory is nil", directory)
+		log.Errorf(ctx, "`%s`: disk-stopFill-directory is nil", directory)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "directory", directory, "directory is nil")
 	}
 	// kill dd or fallocate process
 	pids, _ := cl.GetPidsByProcessName(fillDataFile, ctx)
 	if pids != nil && len(pids) >= 0 {
 		resp := cl.Run(ctx, "kill", fmt.Sprintf("-9 %s", strings.Join(pids, " ")))
-		log.Errorf(ctx, "kill fallocate process err: %s", resp.Err)
+		log.Errorf(ctx, "disk-stopFill-kill fallocate process err: %s", resp.Err)
 	}
 	// kill daemon process
 	//todo
@@ -314,7 +314,7 @@ func stopFill(ctx context.Context, directory string, cl spec.Channel) *spec.Resp
 	pids, _ = cl.GetPidsByProcessName("disk fill", ctx)
 	if pids != nil && len(pids) >= 0 {
 		resp := cl.Run(ctx, "kill", fmt.Sprintf("-9 %s", strings.Join(pids, " ")))
-		log.Errorf(ctx, "kill disk fill daemon process err: %s", resp.Err)
+		log.Errorf(ctx, "disk-stopFill-kill disk fill daemon process err: %s", resp.Err)
 	}
 	fileName := path.Join(directory, fillDataFile)
 	if exec.CheckFilepathExists(ctx, cl, fileName) {

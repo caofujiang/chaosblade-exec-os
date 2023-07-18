@@ -50,7 +50,7 @@ func NewStraceDelayActionSpec() spec.ExpActionCommandSpec {
 					Desc:     "cgroup root path, default value /sys/fs/cgroup",
 					NoArgs:   false,
 					Required: false,
-					Default: "/sys/fs/cgroup",
+					Default:  "/sys/fs/cgroup",
 				},
 			},
 			ActionFlags: []spec.ExpFlagSpec{
@@ -144,18 +144,18 @@ func (dae *StraceDelayActionExecutor) Exec(uid string, ctx context.Context, mode
 	}
 	time := model.ActionFlags["time"]
 	if time == "" {
-		log.Errorf(ctx, "time is nil")
+		log.Errorf(ctx, "kernel-delay-Exec-time is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "time")
 	}
 	syscallName := model.ActionFlags["syscall-name"]
 	if syscallName == "" {
-		log.Errorf(ctx, "syscall-name is nil")
+		log.Errorf(ctx, "kernel-delay-Exec-syscall-name is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "syscall-name")
 	}
 
 	delay_loc_flag = model.ActionFlags["delay-loc"]
 	if delay_loc_flag == "" {
-		log.Errorf(ctx,"delay-loc is nil")
+		log.Errorf(ctx, "kernel-delay-Exec-delay-loc is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "delay-loc")
 	}
 	first_flag = model.ActionFlags["first"]
@@ -167,7 +167,7 @@ func (dae *StraceDelayActionExecutor) Exec(uid string, ctx context.Context, mode
 	return dae.start(ctx, pidList, time, syscallName, delay_loc_flag, first_flag, end_flag, step)
 }
 
-//start strace delay
+// start strace delay
 func (dae *StraceDelayActionExecutor) start(ctx context.Context, pidList string, time string, syscallName string, delayLoc string, first string, end string, step string) *spec.Response {
 	if pidList != "" {
 		pids := strings.Split(pidList, ",")
@@ -200,6 +200,6 @@ func (dae *StraceDelayActionExecutor) start(ctx context.Context, pidList string,
 }
 
 func (dae *StraceDelayActionExecutor) stop(ctx context.Context, pidList string, syscallName string) *spec.Response {
-	ctx = context.WithValue(ctx,"bin", StraceDelayBin)
+	ctx = context.WithValue(ctx, "bin", StraceDelayBin)
 	return exec.Destroy(ctx, dae.channel, "strace delay")
 }

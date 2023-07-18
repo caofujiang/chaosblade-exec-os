@@ -72,7 +72,7 @@ func getPids(ctx context.Context, cl spec.Channel, model *spec.ExpModel, uid str
 	excludeProcess := model.ActionFlags["exclude-process"]
 	ignoreProcessNotFound := model.ActionFlags["ignore-not-found"] == "true"
 	if process == "" && processCmd == "" && localPorts == "" && pid == "" {
-		log.Errorf(ctx, "pid、less process、process-cmd and local-port, less process matcher")
+		log.Errorf(ctx, "process-getPids-pid、less process、process-cmd and local-port, less process matcher")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "pid|process|process-cmd|local-port")
 	}
 

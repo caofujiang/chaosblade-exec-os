@@ -99,7 +99,7 @@ func (tte *TravelTimeExecutor) Exec(uid string, ctx context.Context, model *spec
 	disableNtpStr := model.ActionFlags["disableNtp"]
 
 	if timeOffsetStr == "" {
-		log.Errorf(ctx, "offset is nil")
+		log.Errorf(ctx, "time-travel-exec-offset is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "offset")
 	}
 	disableNtp = disableNtpStr == "true" || disableNtpStr == ""
@@ -126,7 +126,7 @@ func (tte *TravelTimeExecutor) stop(ctx context.Context) *spec.Response {
 func (tte *TravelTimeExecutor) start(ctx context.Context, timeOffsetStr string, disableNtp bool) *spec.Response {
 	duration, err := time.ParseDuration(timeOffsetStr)
 	if err != nil {
-		log.Errorf(ctx, "offset is invalid")
+		log.Errorf(ctx, "time-travel-start-offset is invalid")
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "offset", timeOffsetStr, err)
 	}
 	targetTime := time.Now().Add(duration).Format("01/02/2006 15:04:05")

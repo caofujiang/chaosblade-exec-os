@@ -113,7 +113,7 @@ func (f *FileMoveActionExecutor) Exec(uid string, ctx context.Context, model *sp
 	}
 
 	if !exec.CheckFilepathExists(ctx, f.channel, target) {
-		log.Errorf(ctx, "`%s`: target dir does not exist", filepath)
+		log.Errorf(ctx, "file-move-Exec `%s`: target dir does not exist", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "target", target, "the file does not exist")
 	}
 
@@ -123,7 +123,7 @@ func (f *FileMoveActionExecutor) Exec(uid string, ctx context.Context, model *sp
 	if !force {
 		targetFile := path.Join(target, "/", path.Base(filepath))
 		if exec.CheckFilepathExists(ctx, f.channel, targetFile) {
-			log.Errorf(ctx, "`%s`: target file does not exist", targetFile)
+			log.Errorf(ctx, "file-move-Exec `%s`: target file does not exist", targetFile)
 			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "target", targetFile, "the target file does not exist")
 		}
 	}

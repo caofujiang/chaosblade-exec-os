@@ -150,7 +150,7 @@ func (ns *NetworkFloodExecutor) flood(ctx context.Context) *spec.Response {
 			proc, err := process.NewProcess(pid)
 			if err != nil {
 				if errors.Is(err, process.ErrorProcessNotRunning) {
-					log.Errorf(ctx, "Failed to get iperf process", err.Error())
+					log.Errorf(ctx, "network-flood-Failed to get iperf process", err.Error())
 					response.Success = false
 					response.Result = fmt.Sprintf("Failed to get iperf process %s", err.Error())
 					return response
@@ -173,7 +173,7 @@ func (ns *NetworkFloodExecutor) SetChannel(channel spec.Channel) {
 
 func (ns *NetworkFloodExecutor) validNetworkFlood(iPAddress, port, rate, duration string) error {
 	if len(iPAddress) == 0 {
-		return errors.New("IP address required")
+		return errors.New("network-flood-validNetworkFlood-IP address required")
 	}
 
 	if !CheckIPs(iPAddress) {

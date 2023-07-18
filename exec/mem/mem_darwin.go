@@ -18,7 +18,6 @@ package mem
 
 import (
 	"context"
-	"fmt"
 	"github.com/shirou/gopsutil/mem"
 )
 
@@ -33,6 +32,5 @@ func getAvailableAndTotal(ctx context.Context, burnMemMode string, includeBuffer
 	if burnMemMode == "ram" && !includeBufferCache {
 		available = available + int64(virtualMemory.Buffers+virtualMemory.Cached)
 	}
-	fmt.Println("获取可用的和总的内存=========", total, available)
 	return total, available, nil
 }

@@ -91,7 +91,7 @@ func (f *FileChmodActionExecutor) Exec(uid string, ctx context.Context, model *s
 	mark := model.ActionFlags["mark"]
 	match, _ := regexp.MatchString("^([0-7]{3})$", mark)
 	if !match {
-		log.Errorf(ctx, "`%s` mark is illegal", mark)
+		log.Errorf(ctx, "`%s` file-chmod-exec-mark is illegal", mark)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "mark", mark, "the mark is not matched")
 	}
 
@@ -101,18 +101,18 @@ func (f *FileChmodActionExecutor) Exec(uid string, ctx context.Context, model *s
 	}
 
 	if !exec.CheckFilepathExists(ctx, f.channel, filepath) {
-		log.Errorf(ctx, "`%s`: file does not exist", filepath)
+		log.Errorf(ctx, "file-chmod-exec-file `%s`: does not exist", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "filepath", filepath, "the file does not exist")
 	}
 
 	response := f.channel.Run(ctx, "grep", fmt.Sprintf(`-q "%s:" "%s"`, filepath, tmpFileChmod))
 	if response.Success {
-		log.Errorf(ctx, "%s is already being experimented", filepath)
+		log.Errorf(ctx, "file-chmod-exec %s is already being experimented", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "filepath", filepath, "already being experimented")
 	}
 	response = f.channel.Run(ctx, "stat", fmt.Sprintf(`-c "%%a" %s`, filepath))
 	if !response.Success {
-		log.Errorf(ctx, "`%s`: can't get file's origin mark", filepath)
+		log.Errorf(ctx, "file-chmod-exec `%s`: can't get file's origin mark", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "filepath", filepath, "can't get file's mark")
 	}
 	originMark := response.Result.(string)
@@ -142,7 +142,7 @@ func (f *FileChmodActionExecutor) clearTempFile(filepath string, response *spec.
 	if !response.Success {
 		response = f.channel.Run(ctx, "rm", fmt.Sprintf(`-rf "%s"`, tmpFileChmod))
 		if !response.Success {
-			log.Errorf(ctx, "clean temp file error %s", response.Err)
+			log.Errorf(ctx, "file-chmod-clearTempFile-clean temp file error %s", response.Err)
 		}
 	} else {
 		response = f.channel.Run(ctx, "echo", fmt.Sprintf(`"%s" > %s`,
