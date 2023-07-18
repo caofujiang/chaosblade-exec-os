@@ -109,7 +109,7 @@ func (sde *ScriptDelayExecutor) Exec(uid string, ctx context.Context, model *spe
 	t, err := strconv.Atoi(time)
 	if err != nil {
 		log.Errorf(ctx, "script-delay-exec time %v it must be a positive integer", time)
-		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "time", time, "ti must be a positive integer")
+		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "time", time, "it must be a positive integer")
 	}
 	return sde.start(ctx, scriptFile, functionName, t)
 }
