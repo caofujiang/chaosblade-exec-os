@@ -135,14 +135,14 @@ func (be *BurnIOExecutor) Exec(uid string, ctx context.Context, model *spec.ExpM
 		return be.stop(ctx, readExists, writeExists, directory)
 	}
 	if !util.IsDir(directory) {
-		log.Errorf(ctx, "`%s`: path is illegal, is not a directory", directory)
+		log.Errorf(ctx, "`%s`: disk-burn-path is illegal, is not a directory", directory)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "path", directory, "it must be a directory")
 	}
 	readExists := model.ActionFlags["read"] == "true"
 	writeExists := model.ActionFlags["write"] == "true"
 	if !readExists && !writeExists {
-		log.Errorf(ctx, "less params, read|write")
-		return spec.ResponseFailWithFlags(spec.ParameterLess, "read|write")
+		log.Errorf(ctx, "disk-burn-less params, read|write")
+		return spec.ResponseFailWithFlags(spec.ParameterLess, "disk-burn-read|write")
 	}
 	size := model.ActionFlags["size"]
 	if size == "" {
@@ -165,13 +165,13 @@ func (be *BurnIOExecutor) stop(ctx context.Context, read, write bool, directory 
 	if read {
 		resp := localChannel.Run(ctx, "rm", fmt.Sprintf("-rf %s*", path.Join(directory, readFile)))
 		if !resp.Success {
-			log.Errorf(ctx, "clean read file: %s", resp.Err)
+			log.Errorf(ctx, "disk-burn-stop-clean read file: %s", resp.Err)
 		}
 	}
 	if write {
 		resp := localChannel.Run(ctx, "rm", fmt.Sprintf("-rf %s*", path.Join(directory, writeFile)))
 		if !resp.Success {
-			log.Errorf(ctx, "clean write file: %s", resp.Err)
+			log.Errorf(ctx, "disk-burn-stop-clean write file: %s", resp.Err)
 		}
 	}
 	ctx = context.WithValue(ctx, "bin", BurnIOBin)
@@ -195,7 +195,7 @@ func burnWrite(ctx context.Context, directory, size string, cl spec.Channel) {
 		args := fmt.Sprintf(ddRunningWriteArg, tmpFileForWrite, size, count)
 		response := localChannel.Run(ctx, "dd", args)
 		if !response.Success {
-			log.Errorf(ctx, "disk burn write, run dd err: %s", response.Err)
+			log.Errorf(ctx, "disk-burnWrite, run dd err: %s", response.Err)
 			break
 		}
 	}
@@ -209,7 +209,7 @@ func burnRead(ctx context.Context, directory, size string, cl spec.Channel) {
 	createArgs := fmt.Sprintf(ddCreateArg, tmpFileForRead, 6, count)
 	response := localChannel.Run(ctx, "dd", createArgs)
 	if !response.Success {
-		log.Errorf(ctx, "disk burn read, run dd err: %s", response.Err)
+		log.Errorf(ctx, "disk-burn-read, run dd err: %s", response.Err)
 	}
 
 	for {
@@ -217,7 +217,7 @@ func burnRead(ctx context.Context, directory, size string, cl spec.Channel) {
 		//run with local channel
 		response := localChannel.Run(ctx, "dd", args)
 		if !response.Success {
-			log.Errorf(ctx, "disk burn read, run dd err: %s", response.Err)
+			log.Errorf(ctx, "disk-burn read, run dd err: %s", response.Err)
 			break
 		}
 	}
@@ -229,7 +229,7 @@ func getArgs(ctx context.Context, cl spec.Channel) (string, string, string) {
 	runningWriteArgs := "if=/dev/zero of=%s bs=%sM count=%d oflag=dsync"
 	response := cl.Run(ctx, "cat", "/etc/os-release")
 	if !response.Success {
-		log.Warnf(ctx, "cat /etc/os-release failed, %v. use the default value.", response.Err)
+		log.Warnf(ctx, "disk-getArgs-cat /etc/os-release failed, %v. use the default value.", response.Err)
 		return createArgs, runningReadArgs, runningWriteArgs
 	}
 	if response.Result != nil && strings.Contains(strings.ToUpper(response.Result.(string)), "ID=ALPINE") {

@@ -120,7 +120,7 @@ func main() {
 			util.Debug = true
 		}
 		util.InitLog(util.Bin)
-		log.Infof(ctx, "mode: %s, target: %s, action: %s, flags %v", mode, target, action, expModel.ActionFlags)
+		log.Infof(ctx, "main-mode: %s, target: %s, action: %s, flags %v", mode, target, action, expModel.ActionFlags)
 
 		key := expModel.Target + expModel.ActionName
 		executor := executors[key]

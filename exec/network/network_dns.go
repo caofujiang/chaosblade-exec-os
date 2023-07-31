@@ -99,7 +99,7 @@ func (ns *NetworkDnsExecutor) Exec(uid string, ctx context.Context, model *spec.
 	domain := model.ActionFlags["domain"]
 	ip := model.ActionFlags["ip"]
 	if domain == "" || ip == "" {
-		log.Errorf(ctx, "domain|ip is nil")
+		log.Errorf(ctx, "network-dns-Exec-domain|ip is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "domain|ip")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {

@@ -128,16 +128,16 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 		}
 		err := downloadFile(downloadUrl, scriptFile)
 		if err != nil {
-			log.Errorf(ctx, fmt.Sprintf("download scriptFile  failed  %s", err.Error()))
+			log.Errorf(ctx, fmt.Sprintf("script-execute-exec-download scriptFile  failed  %s", err.Error()))
 			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "params downloadUrl", "it is  invalid")
 		}
 	}
 	if scriptFile == "" { //集群模式
-		log.Errorf(ctx, "file is nil")
+		log.Errorf(ctx, "script-execute-exec-file is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "file")
 	}
 	if !exec.CheckFilepathExists(ctx, sde.channel, scriptFile) {
-		log.Errorf(ctx, "`%s`, file is invalid. it not found", scriptFile)
+		log.Errorf(ctx, "script-execute-exec `%s`, file is invalid. it not found", scriptFile)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "file", scriptFile, "it is not found")
 	}
 
@@ -178,7 +178,7 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 		scriptMain = tarDistDir + "/main"
 	}
 	if !exec.CheckFilepathExists(ctx, sde.channel, scriptMain) {
-		log.Errorf(ctx, "`%s`,main file is not exist in tar", scriptMain)
+		log.Errorf(ctx, "script-execute-start `%s`,main file is not exist in tar", scriptMain)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main file", scriptMain, "it is not found in tar")
 	}
 	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {

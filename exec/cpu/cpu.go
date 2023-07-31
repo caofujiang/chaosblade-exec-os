@@ -183,11 +183,11 @@ func (ce *cpuExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 		var err error
 		cpuPercent, err = strconv.Atoi(cpuPercentStr)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: cpu-percent is illegal, it must be a positive integer", cpuPercentStr)
+			log.Errorf(ctx, "`%s`: Exec-cpu-percent is illegal, it must be a positive integer", cpuPercentStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "cpu-percent", cpuPercentStr, "it must be a positive integer")
 		}
 		if cpuPercent > 100 || cpuPercent < 0 {
-			log.Errorf(ctx, "`%s`: cpu-list is illegal, it must be a positive integer and not bigger than 100", cpuPercentStr)
+			log.Errorf(ctx, "`%s`: Exec-cpu-list is illegal, it must be a positive integer and not bigger than 100", cpuPercentStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "cpu-percent", cpuPercentStr, "it must be a positive integer and not bigger than 100")
 		}
 	} else {
@@ -201,8 +201,8 @@ func (ce *cpuExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 		}
 		cores, err := util.ParseIntegerListToStringSlice("cpu-list", cpuListStr)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: cpu-list is illegal, %s", cpuListStr, err.Error())
-			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "cpu-list", cpuListStr, err.Error())
+			log.Errorf(ctx, "`%s`: Exec-cpu-list is illegal, %s", cpuListStr, err.Error())
+			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "Exec-cpu-list", cpuListStr, err.Error())
 		}
 		cpuList = strings.Join(cores, ",")
 	} else {
@@ -212,8 +212,8 @@ func (ce *cpuExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 		if cpuCountStr != "" {
 			cpuCount, err = strconv.Atoi(cpuCountStr)
 			if err != nil {
-				log.Errorf(ctx, "`%s`: cpu-count is illegal, cpu-count value must be a positive integer", cpuCountStr)
-				return spec.ResponseFailWithFlags(spec.ParameterIllegal, "cpu-count", cpuCountStr, "it must be a positive integer")
+				log.Errorf(ctx, "`%s`: Exec-cpu-count is illegal, cpu-count value must be a positive integer", cpuCountStr)
+				return spec.ResponseFailWithFlags(spec.ParameterIllegal, "Exec-cpu-count", cpuCountStr, "it must be a positive integer")
 			}
 		}
 		if cpuCount <= 0 || cpuCount > runtime.NumCPU() {
@@ -226,11 +226,11 @@ func (ce *cpuExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 		var err error
 		climbTime, err = strconv.Atoi(climbTimeStr)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: climb-time is illegal, climb-time value must be a positive integer", climbTimeStr)
+			log.Errorf(ctx, "`%s`: Exec-climb-time is illegal, climb-time value must be a positive integer", climbTimeStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "climb-time", climbTimeStr, "it must be a positive integer")
 		}
 		if climbTime > 600 || climbTime < 0 {
-			log.Errorf(ctx, "`%s`: climb-time is illegal, climb-time value must be a positive integer and not bigger than 600", climbTimeStr)
+			log.Errorf(ctx, "`%s`: Exec-climb-time is illegal, climb-time value must be a positive integer and not bigger than 600", climbTimeStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "climb-time", climbTimeStr, "must be a positive integer and not bigger than 600")
 		}
 	}
@@ -246,12 +246,12 @@ func (ce *cpuExecutor) start(ctx context.Context, cpuList string, cpuCount, cpuP
 	if cpuList != "" {
 		cores, err := util.ParseIntegerListToStringSlice("cpu-list", cpuList)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: cpu-list is illegal, %s", cpuList, err.Error())
+			log.Errorf(ctx, "`%s`: start-cpu-list is illegal, %s", cpuList, err.Error())
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "cpu-list", cpuList, err.Error())
 		}
 		for _, core := range cores {
 
-			args := fmt.Sprintf(`%s create cpu fullload --cpu-count 1 --cpu-percent %d --climb-time %d --cpu-index %s --uid %s`,
+			args := fmt.Sprintf(`%s start create cpu fullload --cpu-count 1 --cpu-percent %d --climb-time %d --cpu-index %s --uid %s`,
 				os.Args[0], cpuPercent, climbTime, core, ctx.Value(spec.Uid))
 
 			args = fmt.Sprintf("-c %s %s", core, args)
@@ -260,14 +260,14 @@ func (ce *cpuExecutor) start(ctx context.Context, cpuList string, cpuCount, cpuP
 			command.SysProcAttr = &syscall.SysProcAttr{}
 
 			if err := command.Start(); err != nil {
-				return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("taskset exec failed, %v", err))
+				return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("start taskset exec failed, %v", err))
 			}
 		}
 		return spec.ReturnSuccess(ctx.Value(spec.Uid))
 	}
 
 	runtime.GOMAXPROCS(cpuCount)
-	log.Debugf(ctx, "cpu counts: %d", cpuCount)
+	log.Debugf(ctx, "start cpu counts: %d", cpuCount)
 	slopePercent := float64(cpuPercent)
 
 	var cpuIndex int
@@ -277,12 +277,12 @@ func (ce *cpuExecutor) start(ctx context.Context, cpuList string, cpuCount, cpuP
 		var err error
 		cpuIndex, err = strconv.Atoi(cpuIndexStr)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: cpu-index is illegal, cpu-index value must be a positive integer", cpuIndexStr)
-			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "cpu-index", cpuIndexStr, "it must be a positive integer")
+			log.Errorf(ctx, "`%s`: start-cpu-index is illegal, cpu-index value must be a positive integer", cpuIndexStr)
+			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "start-cpu-index", cpuIndexStr, "it must be a positive integer")
 		}
 	}
 
-	// make CPU slowly climb to some level, to simulate slow resource competition 
+	// make CPU slowly climb to some level, to simulate slow resource competition
 	// which system faults cannot be quickly noticed by monitoring system.
 	slope(ctx, cpuPercent, climbTime, &slopePercent, percpu, cpuIndex)
 
@@ -320,7 +320,7 @@ func slope(ctx context.Context, cpuPercent int, climbTime int, slopePercent *flo
 
 func getQuota(ctx context.Context, slopePercent float64, percpu bool, cpuIndex int) int64 {
 	used := getUsed(ctx, percpu, cpuIndex)
-	log.Debugf(ctx, "cpu usage: %f , percpu: %v, cpuIndex %d", used, percpu, cpuIndex)
+	log.Debugf(ctx, "getQuota-cpu usage: %f , percpu: %v, cpuIndex %d", used, percpu, cpuIndex)
 	dx := (slopePercent - used) / 100
 	busy := int64(dx * float64(period))
 	return busy
@@ -358,5 +358,5 @@ func burn(ctx context.Context, quota <-chan int64, slopePercent float64, percpu 
 // stop burn cpu
 func (ce *cpuExecutor) stop(ctx context.Context) *spec.Response {
 	ctx = context.WithValue(ctx, "bin", BurnCpuBin)
-	return exec.Destroy(ctx, ce.channel, "cpu fullload")
+	return exec.Destroy(ctx, ce.channel, "stop-cpu fullload")
 }

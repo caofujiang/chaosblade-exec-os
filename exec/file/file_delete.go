@@ -99,7 +99,7 @@ func (f *FileRemoveActionExecutor) Exec(uid string, ctx context.Context, model *
 	}
 
 	if !exec.CheckFilepathExists(ctx, f.channel, filepath) {
-		log.Errorf(ctx,"`%s`: file does not exist", filepath)
+		log.Errorf(ctx, "file-delete-Exec `%s`: file does not exist", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "filepath", filepath, "the file does not exist")
 	}
 

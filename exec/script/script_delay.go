@@ -86,11 +86,11 @@ func (sde *ScriptDelayExecutor) Exec(uid string, ctx context.Context, model *spe
 
 	scriptFile := model.ActionFlags["file"]
 	if scriptFile == "" {
-		log.Errorf(ctx, "file is nil")
+		log.Errorf(ctx, "script-delay-exec-file is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "file")
 	}
 	if !exec.CheckFilepathExists(ctx, sde.channel, scriptFile) {
-		log.Errorf(ctx, "`%s`, file is invalid. it not found", scriptFile)
+		log.Errorf(ctx, "script-delay-exec `%s`, file is invalid. it not found", scriptFile)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "file", scriptFile, "it is not found")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -98,7 +98,7 @@ func (sde *ScriptDelayExecutor) Exec(uid string, ctx context.Context, model *spe
 	}
 	functionName := model.ActionFlags["function-name"]
 	if functionName == "" {
-		log.Errorf(ctx, "function-name")
+		log.Errorf(ctx, "script-delay-exec-function-name")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "function-name")
 	}
 	time := model.ActionFlags["time"]
@@ -108,8 +108,8 @@ func (sde *ScriptDelayExecutor) Exec(uid string, ctx context.Context, model *spe
 	}
 	t, err := strconv.Atoi(time)
 	if err != nil {
-		log.Errorf(ctx, "time %v it must be a positive integer", time)
-		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "time", time, "ti must be a positive integer")
+		log.Errorf(ctx, "script-delay-exec time %v it must be a positive integer", time)
+		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "time", time, "it must be a positive integer")
 	}
 	return sde.start(ctx, scriptFile, functionName, t)
 }

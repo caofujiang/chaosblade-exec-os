@@ -158,11 +158,11 @@ func getExcludePorts(ctx context.Context, excludePort string, ignorePeerPorts bo
 		if !ignorePeerPorts {
 			peerPorts, err := getPeerPorts(ctx, p, cl)
 			if err != nil {
-				log.Warnf(ctx, "get peer ports for %s err, %v", p, err)
+				log.Warnf(ctx, "network-tc-getExcludePorts-get peer ports for %s err, %v", p, err)
 				errMsg := fmt.Sprintf("get peer ports for %s err, %v, please solve the problem or skip to exclude peer ports by --ignore-peer-port flag", p, err)
 				return nil, fmt.Errorf(errMsg)
 			}
-			log.Infof(ctx, "peer ports for %s: %v", p, peerPorts)
+			log.Infof(ctx, "network-tc-getExcludePorts-peer ports for %s: %v", p, peerPorts)
 			for _, mp := range peerPorts {
 				if _, ok := portSet[mp]; ok {
 					continue
@@ -227,12 +227,12 @@ func preHandleTxqueue(ctx context.Context, netInterface string, cl spec.Channel)
 			txlen := strings.TrimSpace(response.Result.(string))
 			len, err := strconv.Atoi(txlen)
 			if err != nil {
-				log.Warnf(ctx, "parse %s file err, %v", txFile, err)
+				log.Warnf(ctx, "network-tc-preHandleTxqueue-parse %s file err, %v", txFile, err)
 			} else {
 				if len > 0 {
 					return response
 				} else {
-					log.Infof(ctx, "the tx_queue_len value for %s is %s", netInterface, txlen)
+					log.Infof(ctx, "network-tc-preHandleTxqueue-the tx_queue_len value for %s is %s", netInterface, txlen)
 				}
 			}
 		}
@@ -241,7 +241,7 @@ func preHandleTxqueue(ctx context.Context, netInterface string, cl spec.Channel)
 		// set to 1000 directly
 		response := cl.Run(ctx, "ifconfig", fmt.Sprintf("%s txqueuelen 1000", netInterface))
 		if !response.Success {
-			log.Warnf(ctx, "set txqueuelen for %s err, %s", netInterface, response.Err)
+			log.Warnf(ctx, "network-tc-preHandleTxqueue-set txqueuelen for %s err, %s", netInterface, response.Err)
 		}
 	}
 	return spec.ReturnSuccess("success")
@@ -370,7 +370,7 @@ func stopNet(ctx context.Context, netInterface string, cl spec.Channel) *spec.Re
 	if response.Success && response.Result != "" {
 		response = cl.Run(ctx, "tc", fmt.Sprintf(`filter del dev %s parent 1: prio 4`, netInterface))
 		if !response.Success {
-			log.Errorf(ctx, "tc del filter err, %s", response.Err)
+			log.Errorf(ctx, "network-tc-stopNet-tc del filter err, %s", response.Err)
 		}
 	}
 	return cl.Run(ctx, "tc", fmt.Sprintf(`qdisc del dev %s root`, netInterface))
@@ -394,7 +394,7 @@ func getPeerPorts(ctx context.Context, port string, cl spec.Channel) ([]string, 
 		return []string{}, nil
 	}
 	sockets := strings.Split(ssMsg, "\n")
-	log.Infof(ctx, "sockets for %s, %v", port, sockets)
+	log.Infof(ctx, "network-tc-getPeerPorts-sockets for %s, %v", port, sockets)
 	mappingPorts := make([]string, 0)
 	for idx, s := range sockets {
 		if idx == 0 {
@@ -410,7 +410,7 @@ func getPeerPorts(ctx context.Context, port string, cl spec.Channel) ([]string, 
 				// for ipv6 address
 				ipPort = strings.Split(f, "]:")
 				if len(ipPort) != 2 {
-					log.Warnf(ctx, "illegal socket address: %s", f)
+					log.Warnf(ctx, "network-tc-getPeerPorts-illegal socket address: %s", f)
 					continue
 				}
 			}

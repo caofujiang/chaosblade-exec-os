@@ -87,23 +87,23 @@ func (impl *HttpRequestExecutor) Exec(uid string, ctx context.Context, model *sp
 
 	urlStr := model.ActionFlags["url"]
 	if urlStr == "" {
-		log.Errorf(ctx, "url-is-nil")
+		log.Errorf(ctx, "http-request-Exec-url-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "url")
 	}
 
 	if !strings.Contains(urlStr, "https://") {
-		log.Errorf(ctx, "url is not unsupported protocol scheme")
+		log.Errorf(ctx, "http-request-Exec-url is not unsupported protocol scheme")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "url")
 	}
 
 	c := model.ActionFlags["count"]
 	if c == "" {
-		log.Errorf(ctx, "count-is-nil")
+		log.Errorf(ctx, "http-request-Exec-count-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "count")
 	}
 	c1, err := strconv.Atoi(c)
 	if err != nil {
-		log.Errorf(ctx, "count %v it must be a positive integer", c1)
+		log.Errorf(ctx, "http-request-Exec-count %v it must be a positive integer", c1)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "count", c1, "ti must be a positive integer")
 	}
 	return impl.start(ctx, urlStr, c1)
@@ -111,7 +111,7 @@ func (impl *HttpRequestExecutor) Exec(uid string, ctx context.Context, model *sp
 
 func (impl *HttpRequestExecutor) start(ctx context.Context, url string, c int) *spec.Response {
 	if c == 0 {
-		log.Errorf(ctx, "count-is-nil")
+		log.Errorf(ctx, "http-request-start-count-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "count", c)
 	}
 

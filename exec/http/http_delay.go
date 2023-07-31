@@ -98,22 +98,22 @@ func (impl *HttpDelayExecutor) Exec(uid string, ctx context.Context, model *spec
 	}
 	urlStr := model.ActionFlags["url"]
 	if urlStr == "" {
-		log.Errorf(ctx, "url-is-nil")
+		log.Errorf(ctx, "http-delay-Exec-url-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "url")
 	}
 	if !strings.Contains(urlStr, "https://") {
-		log.Errorf(ctx, "url is not unsupported protocol scheme")
+		log.Errorf(ctx, "http-delay-Exec-url is not unsupported protocol scheme")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "url")
 	}
 
 	t := model.ActionFlags["time"]
 	if t == "" {
-		log.Errorf(ctx, "time-is-nil")
+		log.Errorf(ctx, "http-delay-Exec-time-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "time")
 	}
 	t1, err := strconv.Atoi(t)
 	if err != nil {
-		log.Errorf(ctx, "time %v it must be a positive integer", t1)
+		log.Errorf(ctx, "http-delay-Exec-time %v it must be a positive integer", t1)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "time", t1, "time must be a positive integer")
 	}
 
@@ -135,7 +135,7 @@ func (impl *HttpDelayExecutor) GetTargetDelay(ctx context.Context, url string, t
 	client := http.Client{}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		log.Errorf(ctx, "get-request-url-failed", err)
+		log.Errorf(ctx, "http-delay-GetTargetDelay-get-request-url-failed", err)
 		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get Request failed %s ", target))
 	}
 	duration := time.Duration(t) * time.Millisecond
@@ -145,7 +145,7 @@ func (impl *HttpDelayExecutor) GetTargetDelay(ctx context.Context, url string, t
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Errorf(ctx, "get-client-url-failed", err)
+		log.Errorf(ctx, "http-delay-GetTargetDelay-get-client-url-failed", err)
 		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client Request failed %s ", target))
 	}
 	defer resp.Body.Close()
@@ -155,7 +155,7 @@ func (impl *HttpDelayExecutor) GetTargetDelay(ctx context.Context, url string, t
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf(ctx, "Failed to read response body", err)
+		log.Errorf(ctx, "http-delay-GetTargetDelay-Failed to read response body", err)
 		return spec.ReturnFail(spec.ActionNotSupport, fmt.Sprintf("get client response body failed %s ", string(body)))
 	}
 

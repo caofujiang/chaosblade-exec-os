@@ -89,23 +89,23 @@ func (impl *HttpTimeoutExecutor) Exec(uid string, ctx context.Context, model *sp
 
 	urlStr := model.ActionFlags["url"]
 	if urlStr == "" {
-		log.Errorf(ctx, "url-is-nil")
+		log.Errorf(ctx, "http-timeout-Exec-url-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "url")
 	}
 
 	if !strings.Contains(urlStr, "https://") {
-		log.Errorf(ctx, "url is not unsupported protocol scheme")
+		log.Errorf(ctx, "http-timeout-Exec-url is not unsupported protocol scheme")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "url")
 	}
 
 	timeout := model.ActionFlags["time"]
 	if timeout == "" {
-		log.Errorf(ctx, "timeout-is-nil")
+		log.Errorf(ctx, "http-timeout-Exec-timeout-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "timeout")
 	}
 	t1, err := strconv.Atoi(timeout)
 	if err != nil {
-		log.Errorf(ctx, "timeout %v it must be a positive integer", t1)
+		log.Errorf(ctx, "http-timeout-Exec-timeout %v it must be a positive integer", t1)
 		return spec.ResponseFailWithFlags(spec.ParameterIllegal, "timeout", t1, "timeout must be a positive integer")
 	}
 	return impl.start(ctx, urlStr, t1)
@@ -113,7 +113,7 @@ func (impl *HttpTimeoutExecutor) Exec(uid string, ctx context.Context, model *sp
 
 func (impl *HttpTimeoutExecutor) start(ctx context.Context, url string, t int) *spec.Response {
 	if t == 0 {
-		log.Errorf(ctx, "timeout-is-nil")
+		log.Errorf(ctx, "http-timeout-start-timeout-is-nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "timeout", t)
 	}
 
@@ -122,14 +122,14 @@ func (impl *HttpTimeoutExecutor) start(ctx context.Context, url string, t int) *
 
 	req, err := http.NewRequestWithContext(ctxNew, http.MethodGet, url, nil)
 	if err != nil {
-		log.Errorf(ctxNew, "http NewRequestWithContext creation failed:", err.Error())
+		log.Errorf(ctxNew, "http-timeout-start-http NewRequestWithContext creation failed:", err.Error())
 		return spec.ResponseFailWithFlags(spec.ActionNotSupport, "NewRequestWithContext timeout", t)
 	}
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Errorf(ctxNew, "Request failed:", err.Error())
+		log.Errorf(ctxNew, "http-timeout-start-Request failed:", err.Error())
 		return spec.ResponseFailWithFlags(spec.ActionNotSupport, "the interrupt HTTP connection timeout", t)
 	}
 	defer resp.Body.Close()

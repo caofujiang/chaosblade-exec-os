@@ -29,7 +29,6 @@ import (
 )
 
 func getAvailableAndTotal(ctx context.Context, burnMemMode string, includeBufferCache bool) (int64, int64, error) {
-
 	pid := ctx.Value(channel.NSTargetFlagName)
 	total := int64(0)
 	available := int64(0)
@@ -45,7 +44,7 @@ func getAvailableAndTotal(ctx context.Context, burnMemMode string, includeBuffer
 			cgroupRoot = "/sys/fs/cgroup/"
 		}
 
-		log.Debugf(ctx, "get mem useage by cgroup, root path: %s", cgroupRoot)
+		log.Debugf(ctx, "mem-linux-get mem useage by cgroup, root path: %s", cgroupRoot)
 
 		cgroup, err := cgroups.Load(exec.Hierarchy(cgroupRoot.(string)), exec.PidPath(p))
 		if err != nil {

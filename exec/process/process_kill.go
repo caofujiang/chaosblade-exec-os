@@ -126,7 +126,7 @@ func (kpe *KillProcessExecutor) Exec(uid string, ctx context.Context, model *spe
 	pids := resp.Result.(string)
 	signal := model.ActionFlags["signal"]
 	if signal == "" {
-		log.Errorf(ctx, "less signal flag value")
+		log.Errorf(ctx, "process-kill-less signal flag value")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "signal")
 	}
 	return kpe.channel.Run(ctx, "kill", fmt.Sprintf("-%s %s", signal, pids))

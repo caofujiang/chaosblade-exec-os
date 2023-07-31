@@ -217,17 +217,17 @@ func (ce *memExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 		var err error
 		memPercent, err = strconv.Atoi(memPercentStr)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: mem-percent  must be a positive integer", memPercentStr)
+			log.Errorf(ctx, "mem-Exec `%s`: mem-percent  must be a positive integer", memPercentStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "mem-percent", memPercentStr, "it must be a positive integer")
 		}
 		if memPercent > 100 || memPercent < 0 {
-			log.Errorf(ctx, "`%s`: mem-percent  must be a positive integer and not bigger than 100", memPercentStr)
+			log.Errorf(ctx, "mem-Exec `%s`: mem-percent  must be a positive integer and not bigger than 100", memPercentStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "mem-percent", memPercentStr, "it must be a positive integer and not bigger than 100")
 		}
 	} else if memReserveStr != "" {
 		memReserve, err = strconv.Atoi(memReserveStr)
 		if err != nil {
-			log.Errorf(ctx, "`%s`: reserve  must be a positive integer", memReserveStr)
+			log.Errorf(ctx, "mem-Exec `%s`: reserve  must be a positive integer", memReserveStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "reserve", memReserveStr, err)
 		}
 	} else {
@@ -258,7 +258,6 @@ func calculateMemSize(ctx context.Context, burnMemMode string, percent, reserve 
 	if err != nil {
 		return 0, 0, err
 	}
-
 	reserved := int64(0)
 	if percent != 0 {
 		reserved = (total * int64(100-percent) / 100) / 1024 / 1024
@@ -267,7 +266,7 @@ func calculateMemSize(ctx context.Context, burnMemMode string, percent, reserve 
 	}
 	expectSize := available/1024/1024 - reserved
 
-	log.Debugf(ctx, "available: %d, percent: %d, reserved: %d, expectSize: %d", available/1024/1024, percent, reserved, expectSize)
+	log.Debugf(ctx, "mem-calculateMemSize-available: %d, percent: %d, reserved: %d, expectSize: %d", available/1024/1024, percent, reserved, expectSize)
 
 	return total / 1024 / 1024, expectSize, nil
 }
@@ -282,10 +281,11 @@ func burnMemWithCache(ctx context.Context, memPercent, memReserve, memRate int, 
 	filePath := path.Join(path.Join(util.GetProgramPath(), dirName), fileName)
 	tick := time.Tick(time.Second)
 	for range tick {
-		_, expectMem, err := calculateMemSize(ctx, burnMemMode, memPercent, memReserve, includeBufferCache)
+		total, expectMem, err := calculateMemSize(ctx, burnMemMode, memPercent, memReserve, includeBufferCache)
 		if err != nil {
-			log.Fatalf(ctx, "calculate memsize err, %v", err)
+			log.Fatalf(ctx, "mem-burnMemWithCache-calculate memsize err, %v", err)
 		}
+
 		fillMem := expectMem
 		if expectMem > 0 {
 			if expectMem > int64(memRate) {
@@ -294,9 +294,11 @@ func burnMemWithCache(ctx context.Context, memPercent, memReserve, memRate int, 
 			nFilePath := fmt.Sprintf("%s%d", filePath, fileCount)
 			response := cl.Run(ctx, "dd", fmt.Sprintf("if=/dev/zero of=%s bs=1M count=%d", nFilePath, fillMem))
 			if !response.Success {
-				log.Fatalf(ctx, "burn mem with cache err, %v", err)
+				log.Fatalf(ctx, "mem-burnMemWithCache-burn mem with cache err, %v", err)
 			}
 			fileCount++
+		} else {
+			log.Infof(ctx, "mem-big-mem-burnMemWithCache-info", "expectMem", expectMem, "total", total)
 		}
 	}
 }
@@ -308,10 +310,10 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 		scoreAdjFile := fmt.Sprintf(processOOMAdj, os.Getpid())
 		if _, err := os.Stat(scoreAdjFile); err == nil || os.IsExist(err) {
 			if err := ioutil.WriteFile(scoreAdjFile, []byte(oomMinAdj), 0644); err != nil {
-				log.Errorf(ctx, "run burn memory by %s mode failed, cannot edit the process oom_score_adj, %v", burnMemMode, err)
+				log.Errorf(ctx, "mem-start-run burn memory by %s mode failed, cannot edit the process oom_score_adj, %v", burnMemMode, err)
 			}
 		} else {
-			log.Errorf(ctx, "score adjust file: %s not exists, %v", scoreAdjFile, err)
+			log.Errorf(ctx, "mem-start-score adjust file: %s not exists, %v", scoreAdjFile, err)
 		}
 	}
 
@@ -328,12 +330,18 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 		var caches = make(map[int][]Blocks, 1)
 		caches[count] = make([]Blocks, 0)
 		for range tick {
-			_, expectMem, err := calculateMemSize(ctx, burnMemMode, memPercent, memReserve, includeBufferCache)
+			total, expectMem, err := calculateMemSize(ctx, burnMemMode, memPercent, memReserve, includeBufferCache)
 			if err != nil {
-				log.Fatalf(ctx, "calculate memsize err, %v", err.Error())
+				log.Fatalf(ctx, "mem-start-calculate memsize err, %v", err.Error())
 			}
 			fillMem := expectMem
-			if expectMem > 0 {
+			result := ((1 - (float64(fillMem) / float64(total))) * 100)
+
+			if result > 10 {
+				result -= 10
+			}
+			log.Infof(ctx, "mem-start-big-mem-expectMem-info", "expectMem", expectMem, "result", result, !(int(result) > memPercent))
+			if expectMem > 0 && (!(int(result) > memPercent)) {
 				if expectMem > int64(memRate) {
 					fillMem = int64(memRate)
 				} else {
@@ -343,15 +351,17 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 					}
 				}
 				fillSize := int(8 * fillMem)
+
 				buf := caches[count]
-				if cap(buf)-len(buf) < fillSize &&
-					int(math.Floor(float64(cap(buf))*1.25)) >= int(8*expectMem) {
+				if cap(buf)-len(buf) < fillSize && int(math.Floor(float64(cap(buf))*1.25)) >= int(8*expectMem) {
 					count += 1
 					caches[count] = make([]Blocks, 0)
 					buf = caches[count]
 				}
-				log.Debugf(ctx, "count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d", count, len(buf), cap(buf), expectMem, fillSize)
+				log.Debugf(ctx, "mem-start-count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d", count, len(buf), cap(buf), expectMem, fillSize)
 				caches[count] = append(buf, make([]Blocks, fillSize)...)
+			} else {
+				log.Infof(ctx, "mem-start-big-mem-expectMem-info", "expectMem", expectMem)
 			}
 		}
 	} else {
@@ -360,7 +370,7 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 		for range tick {
 			_, expectMem, err := calculateMemSize(ctx, burnMemMode, memPercent, memReserve, includeBufferCache)
 			if err != nil {
-				log.Fatalf(ctx, "calculate memsize err, %v", err.Error())
+				log.Fatalf(ctx, "mem-start-calculate memsize err, %v", err.Error())
 			}
 			fillMem := expectMem
 			if expectMem > 0 {
@@ -380,8 +390,10 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 					cache[count] = make([]Block, 0)
 					buf = cache[count]
 				}
-				log.Debugf(ctx, "count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d", count, len(buf), cap(buf), expectMem, fillSize)
+				log.Debugf(ctx, "mem-start-count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d", count, len(buf), cap(buf), expectMem, fillSize)
 				cache[count] = append(buf, make([]Block, fillSize)...)
+			} else {
+				log.Infof(ctx, "mem-start-normal-expectMem-info", "expectMem", expectMem)
 			}
 		}
 	}

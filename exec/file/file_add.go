@@ -115,7 +115,7 @@ func (f *FileAddActionExecutor) Exec(uid string, ctx context.Context, model *spe
 	}
 
 	if exec.CheckFilepathExists(ctx, f.channel, filepath) {
-		log.Errorf(ctx, "`%s`: filepath is exist", filepath)
+		log.Errorf(ctx, "`%s`: file-add-Exec-filepath is exist", filepath)
 		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "filepath", filepath, "the filepath is exist")
 	}
 

@@ -97,7 +97,7 @@ func (ns *NetworkDownExecutor) Exec(uid string, ctx context.Context, model *spec
 	duration := model.ActionFlags["duration"]
 
 	if device == "" {
-		log.Errorf(ctx, "network device interface is nil")
+		log.Errorf(ctx, "network-down-exec-device interface is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "network device interface")
 	}
 

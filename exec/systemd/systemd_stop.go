@@ -86,7 +86,7 @@ func (sse *StopSystemdExecutor) Exec(uid string, ctx context.Context, model *spe
 
 	service := model.ActionFlags["service"]
 	if service == "" {
-		log.Errorf(ctx, "less service name")
+		log.Errorf(ctx, "systemd-stop-exec-less service name")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "service")
 	}
 

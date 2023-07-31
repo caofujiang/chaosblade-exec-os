@@ -84,7 +84,7 @@ func (ce *NetworkCorruptExecutor) Exec(uid string, ctx context.Context, model *s
 
 	netInterface := model.ActionFlags["interface"]
 	if netInterface == "" {
-		log.Errorf(ctx,"interface is nil")
+		log.Errorf(ctx, "interface is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "interface")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -92,7 +92,7 @@ func (ce *NetworkCorruptExecutor) Exec(uid string, ctx context.Context, model *s
 	} else {
 		percent := model.ActionFlags["percent"]
 		if percent == "" {
-			log.Errorf(ctx, "percent is nil")
+			log.Errorf(ctx, "network-corrupt-percent is nil")
 			return spec.ResponseFailWithFlags(spec.ParameterLess, "percent")
 		}
 		localPort := model.ActionFlags["local-port"]
