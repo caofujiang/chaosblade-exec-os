@@ -84,7 +84,7 @@ func (de *NetworkDuplicateExecutor) Exec(uid string, ctx context.Context, model 
 
 	netInterface := model.ActionFlags["interface"]
 	if netInterface == "" {
-		log.Errorf(ctx, "interface is nil")
+		log.Errorf(ctx, "network-duplicate-exec-interface is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "interface")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -92,7 +92,7 @@ func (de *NetworkDuplicateExecutor) Exec(uid string, ctx context.Context, model 
 	} else {
 		percent := model.ActionFlags["percent"]
 		if percent == "" {
-			log.Errorf(ctx, "percent is nil")
+			log.Errorf(ctx, "network-duplicate-exec-percent is nil")
 			return spec.ResponseFailWithFlags(spec.ParameterLess, "interface")
 		}
 		localPort := model.ActionFlags["local-port"]

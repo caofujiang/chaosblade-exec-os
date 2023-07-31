@@ -98,7 +98,7 @@ func (ce *NetworkReorderExecutor) Exec(uid string, ctx context.Context, model *s
 
 	netInterface := model.ActionFlags["interface"]
 	if netInterface == "" {
-		log.Errorf(ctx, "interface is nil")
+		log.Errorf(ctx, "network-reorder-exec-interface is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "interface")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -106,7 +106,7 @@ func (ce *NetworkReorderExecutor) Exec(uid string, ctx context.Context, model *s
 	} else {
 		percent := model.ActionFlags["percent"]
 		if percent == "" {
-			log.Errorf(ctx, "percent i nil")
+			log.Errorf(ctx, "network-reorder-exec-percent i nil")
 			return spec.ResponseFailWithFlags(spec.ParameterLess, "percent")
 		}
 		gap := model.ActionFlags["gap"]

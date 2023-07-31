@@ -5,18 +5,19 @@ import (
 )
 
 type buildtargetfilterparam = struct {
-	input  struct {
-		localPort string
-		remotePort string
-		destIpRules []string
-		excludePorts []string
+	input struct {
+		localPort      string
+		remotePort     string
+		destIpRules    []string
+		excludePorts   []string
 		excludeIpRules []string
-		args string
-		netInterface string
-		protocol string
+		args           string
+		netInterface   string
+		protocol       string
 	}
 	expect string
 }
+
 func TestbuildTargetFilterPortAndIp(t *testing.T) {
 	var tests []buildtargetfilterparam
 	var test1, test2 buildtargetfilterparam
@@ -41,7 +42,7 @@ func TestbuildTargetFilterPortAndIp(t *testing.T) {
 		//localPort, remotePort string, destIpRules, excludePorts, excludeIpRules []string, args string, netInterface, protocol string
 		returnargs := buildTargetFilterPortAndIp(tt.input.localPort, tt.input.remotePort, tt.input.destIpRules, tt.input.excludePorts, tt.input.excludeIpRules, tt.input.args, tt.input.netInterface, tt.input.protocol)
 		if returnargs != tt.expect {
-			t.Errorf("unexpected result: %s, expected: %s", returnargs, tt.expect)
+			t.Errorf("network-tc-test-TestbuildTargetFilterPortAndIp-unexpected result: %s, expected: %s", returnargs, tt.expect)
 		}
 	}
 }

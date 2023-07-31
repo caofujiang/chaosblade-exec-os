@@ -94,7 +94,7 @@ func (de *NetworkDelayExecutor) Exec(uid string, ctx context.Context, model *spe
 
 	netInterface := model.ActionFlags["interface"]
 	if netInterface == "" {
-		log.Errorf(ctx, "interface is nil")
+		log.Errorf(ctx, "network-delay-exec-interface is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "interface")
 	}
 	if _, ok := spec.IsDestroy(ctx); ok {
@@ -102,7 +102,7 @@ func (de *NetworkDelayExecutor) Exec(uid string, ctx context.Context, model *spe
 	} else {
 		time := model.ActionFlags["time"]
 		if time == "" {
-			log.Errorf(ctx, "time is nil")
+			log.Errorf(ctx, "network-delay-exec-time is nil")
 			return spec.ResponseFailWithFlags(spec.ParameterLess, "time")
 		}
 		offset := model.ActionFlags["offset"]

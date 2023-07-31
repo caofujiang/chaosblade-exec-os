@@ -94,7 +94,7 @@ func (nle *NetworkLossExecutor) Exec(uid string, ctx context.Context, model *spe
 	var dev = ""
 	if netInterface, ok := model.ActionFlags["interface"]; ok {
 		if netInterface == "" {
-			log.Errorf(ctx,"interface is nil")
+			log.Errorf(ctx, "network-loss-exec-interface is nil")
 			return spec.ResponseFailWithFlags(spec.ParameterLess, "interface")
 		}
 		dev = netInterface
@@ -104,7 +104,7 @@ func (nle *NetworkLossExecutor) Exec(uid string, ctx context.Context, model *spe
 	}
 	percent := model.ActionFlags["percent"]
 	if percent == "" {
-		log.Errorf(ctx, "percent is nil")
+		log.Errorf(ctx, "network-loss-exec-percent is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "percent")
 	}
 	localPort := model.ActionFlags["local-port"]
