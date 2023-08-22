@@ -117,7 +117,7 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 		ret := strings.Split(fileArgs, ":")
 		fileArgs = strings.Join(ret, " ")
 	}
-	//是否执行恢复脚本
+	//是否执行恢复脚本参数
 	recover := model.ActionFlags["recover"]
 	if downloadUrl != "" { //host模式
 		if scriptFile != "" {
@@ -132,7 +132,7 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "params downloadUrl", "it is  invalid")
 		}
 	}
-	if scriptFile == "" { //集群模式
+	if scriptFile == "" { //集群模式要传递脚本文件
 		log.Errorf(ctx, "script-execute-exec-file is nil")
 		return spec.ResponseFailWithFlags(spec.ParameterLess, "file")
 	}
@@ -166,26 +166,46 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 		sde.stop(ctx, scriptFile)
 	}
 	if response = sde.channel.Run(ctx, "tar", fmt.Sprintf(`-xvf %s -C  %s`, scriptFile, tarDistDir)); !response.Success {
-		sde.stop(ctx, tarDistDir)
+		sde.stop(ctx, scriptFile)
 	}
 	//UnTar(scriptFile, tarDistDir)
 	//判断有没有main主文件，没有直接返错误
 	var scriptMain string
-
+	var isPythonFlag bool
 	if recover == "true" {
-		scriptMain = tarDistDir + "/recover.sh"
+		if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/recover.sh") {
+			scriptMain = tarDistDir + "/recover.sh"
+		} else if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/recover.py") {
+			scriptMain = tarDistDir + "/recover.py"
+			isPythonFlag = true
+		} else {
+			log.Errorf(ctx, "script-execute-start `%s`,recover script file is not exist in tar")
+			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "recover script file  is not exist in tar")
+		}
 	} else {
-		scriptMain = tarDistDir + "/main"
-	}
-	if !exec.CheckFilepathExists(ctx, sde.channel, scriptMain) {
-		log.Errorf(ctx, "script-execute-start `%s`,main file is not exist in tar", scriptMain)
-		return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main file", scriptMain, "it is not found in tar")
+		if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/main") {
+			scriptMain = tarDistDir + "/main"
+		} else if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/main.py") {
+			scriptMain = tarDistDir + "/main.py"
+			isPythonFlag = true
+		} else {
+			log.Errorf(ctx, "script-execute-start `%s`,main script file is not exist in tar")
+			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main script file  is not exist in tar")
+		}
 	}
 	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {
-		sde.stop(ctx, scriptMain)
+		sde.stop(ctx, scriptFile)
+	}
+	//①phthon脚本 判断是否包含.py文件，但执行不录制纸执行过程
+	if isPythonFlag {
+		response = insertContentToPythonScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
+		if !response.Success {
+			sde.stop(ctx, scriptFile)
+		}
+		return response
 	}
 
-	//录制script脚本执行过程
+	//②shell脚本：执行，同时录制script脚本执行过程
 	time := "/tmp/" + uid + ".time"
 	out := "/tmp/" + uid + ".out"
 	if runtime.GOOS == "darwin" {
@@ -196,7 +216,7 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 	}
 	response = insertContentToScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
 	if !response.Success {
-		sde.stop(ctx, scriptMain)
+		sde.stop(ctx, scriptFile)
 	}
 	//os.RemoveAll(tarDistDir)
 	var errInfo, errUploadInfo string
@@ -221,6 +241,7 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 		newResult["outMsg"] = response.Result
 		response.Result = newResult
 	}
+
 	return response
 }
 
