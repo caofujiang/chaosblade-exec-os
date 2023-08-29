@@ -18,10 +18,9 @@ package host
 
 import (
 	"context"
+	"fmt"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"os/exec"
 )
 
 const HostRestartBin = "chaos_hostRestart"
@@ -34,14 +33,21 @@ func NewHostRestartActionSpec() spec.ExpActionCommandSpec {
 	return &HostRestartActionCommandSpec{
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{},
-			ActionFlags:    []spec.ExpFlagSpec{},
+			ActionFlags: []spec.ExpFlagSpec{
+				&spec.ExpFlag{
+					Name:     "time",
+					Desc:     "restart after time, unit: now、minute such as 1、time such as 20:35",
+					Required: false,
+				},
+			},
 			ActionExecutor: &HostRestartExecutor{},
 			ActionExample: `
-# Restart local host
-./blade create host restart
+# Restart remote host
+./blade create host restart now
+./blade create host restart  1
 
 # Restart remote host: 192.168.56.102
-./blade create host restart  --channel ssh --ssh-host 192.168.56.102  --ssh-user root  --install-path /root/chaosblade-1.7.1
+./blade create host restart  --channel ssh --ssh-host 192.168.56.102  --ssh-user root  --install-path /root/chaosblade-1.7.3
 `,
 			ActionPrograms:   []string{HostRestartBin},
 			ActionCategories: []string{category.SystemTime},
@@ -81,27 +87,18 @@ func (sse *HostRestartExecutor) Name() string {
 }
 
 func (sse *HostRestartExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
-
 	if _, ok := spec.IsDestroy(ctx); ok {
-		return spec.ReturnSuccess("destroy restart host success")
+		return spec.ReturnSuccess(uid)
 	}
+	restartTime := model.ActionFlags["time"]
 
-	return sse.start(ctx)
+	if restartTime != "" {
+		return sse.channel.Run(ctx, "shutdown", fmt.Sprintf("-%s %s", "r", restartTime))
+	} else {
+		return sse.channel.Run(ctx, "reboot", "")
+	}
 }
 
 func (sse *HostRestartExecutor) SetChannel(channel spec.Channel) {
 	sse.channel = channel
-}
-
-func (sse *HostRestartExecutor) start(ctx context.Context) *spec.Response {
-
-	cmd := exec.Command("reboot")
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		errMsg := err.Error()
-		log.Errorf(ctx, errMsg)
-		return spec.ResponseFailWithFlags(spec.ActionNotSupport, errMsg)
-	}
-	return spec.ReturnSuccess("host reboot success")
-
 }

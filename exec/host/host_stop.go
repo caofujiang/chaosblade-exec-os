@@ -18,10 +18,9 @@ package host
 
 import (
 	"context"
+	"fmt"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"os/exec"
 )
 
 const HostStopBin = "chaos_hostStop"
@@ -34,7 +33,13 @@ func NewHostStopActionSpec() spec.ExpActionCommandSpec {
 	return &HostStopActionCommandSpec{
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{},
-			ActionFlags:    []spec.ExpFlagSpec{},
+			ActionFlags: []spec.ExpFlagSpec{
+				&spec.ExpFlag{
+					Name:     "time",
+					Desc:     "restart after time, unit: now、minute such as 1、time such as 20:35",
+					Required: false,
+				},
+			},
 			ActionExecutor: &HostStopExecutor{},
 			ActionExample: `
 # Stop local host
@@ -83,25 +88,16 @@ func (sse *HostStopExecutor) Name() string {
 func (sse *HostStopExecutor) Exec(uid string, ctx context.Context, model *spec.ExpModel) *spec.Response {
 
 	if _, ok := spec.IsDestroy(ctx); ok {
-		return spec.ReturnSuccess("destroy stop host success")
+		return spec.ReturnSuccess(uid)
 	}
-
-	return sse.start(ctx)
+	stopTime := model.ActionFlags["time"]
+	if stopTime != "" {
+		return sse.channel.Run(ctx, "shutdown", fmt.Sprintf("-%s %s", "h", stopTime))
+	} else {
+		return sse.channel.Run(ctx, "poweroff", "")
+	}
 }
 
 func (sse *HostStopExecutor) SetChannel(channel spec.Channel) {
 	sse.channel = channel
-}
-
-func (sse *HostStopExecutor) start(ctx context.Context) *spec.Response {
-
-	cmd := exec.Command("shutdown")
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		errMsg := err.Error()
-		log.Errorf(ctx, errMsg)
-		return spec.ResponseFailWithFlags(spec.ActionNotSupport, errMsg)
-	}
-	return spec.ReturnSuccess("host shutdown success")
-
 }
