@@ -114,7 +114,7 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 	scriptFile := model.ActionFlags["file"]
 	fileArgs := model.ActionFlags["file-args"]
 	if fileArgs != "" {
-		ret := strings.Split(fileArgs, ":")
+		ret := strings.Split(fileArgs, "@A@B@C@")
 		fileArgs = strings.Join(ret, " ")
 	}
 	//是否执行恢复脚本参数
