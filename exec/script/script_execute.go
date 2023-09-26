@@ -49,7 +49,7 @@ func NewScripExecuteActionCommand() spec.ExpActionCommandSpec {
 			ActionFlags: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name:     "file-args",
-					Desc:     "file-args, a string separated by :",
+					Desc:     "file-args, a string separated by @A@B@C@",
 					Required: true,
 				},
 				&spec.ExpFlag{
@@ -149,10 +149,11 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 
 func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArgs, uploadUrl, uid, recover string) *spec.Response {
 	// backup file
-	response := backScript(ctx, sde.channel, scriptFile)
-	if !response.Success {
-		return response
-	}
+	//response := backScript(ctx, sde.channel, scriptFile)
+	//if !response.Success {
+	//	return response
+	//}
+	response := new(spec.Response)
 	//todo 有需要再放开
 	//timeContent, err := ioutil.ReadFile(time)
 	//if err != nil {
@@ -183,8 +184,8 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "recover script file  is not exist in tar")
 		}
 	} else {
-		if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/main") {
-			scriptMain = tarDistDir + "/main"
+		if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/main.sh") {
+			scriptMain = tarDistDir + "/main.sh"
 		} else if exec.CheckFilepathExists(ctx, sde.channel, tarDistDir+"/main.py") {
 			scriptMain = tarDistDir + "/main.py"
 			isPythonFlag = true
