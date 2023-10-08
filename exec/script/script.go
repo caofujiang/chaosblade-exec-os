@@ -89,6 +89,13 @@ func recoverScript(ctx context.Context, channel spec.Channel, scriptFile string)
 	return channel.Run(ctx, "rm", fmt.Sprintf("-rf %s", bakFile))
 }
 
+func recoverScriptDel(ctx context.Context, channel spec.Channel, scriptFile string) *spec.Response {
+	if !exec.CheckFilepathExists(ctx, channel, scriptFile) {
+		return spec.ResponseFailWithFlags(spec.FileNotExist, scriptFile)
+	}
+	return channel.Run(ctx, "rm", fmt.Sprintf("-rf %s", scriptFile))
+}
+
 func getBackFile(scriptFile string) string {
 	return scriptFile + bakFileSuffix
 }

@@ -18,6 +18,7 @@ package script
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -142,7 +143,7 @@ func (sde *ScriptExecuteExecutor) Exec(uid string, ctx context.Context, model *s
 	}
 
 	if _, ok := spec.IsDestroy(ctx); ok {
-		return sde.stop(ctx, scriptFile)
+		return sde.scriptFileDel(ctx, scriptFile)
 	}
 	return sde.start(ctx, scriptFile, fileArgs, uploadUrl, uid, recover)
 }
@@ -164,10 +165,10 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 	//main.tar是一个或者多个文件直接打的tar，外层没有目录，eg: scriptFile="/Users/apple/tar_file/main.tar
 	tarDistDir := filepath.Dir(scriptFile) + "/" + fmt.Sprintf("%d", time.Now().UnixNano())
 	if response = sde.channel.Run(ctx, "mkdir", fmt.Sprintf(`-p %s`, tarDistDir)); !response.Success {
-		sde.stop(ctx, scriptFile)
+		sde.scriptFileDel(ctx, scriptFile)
 	}
 	if response = sde.channel.Run(ctx, "tar", fmt.Sprintf(`-xvf %s -C  %s`, scriptFile, tarDistDir)); !response.Success {
-		sde.stop(ctx, scriptFile)
+		sde.scriptFileDel(ctx, scriptFile)
 	}
 	//UnTar(scriptFile, tarDistDir)
 	//判断有没有main主文件，没有直接返错误
@@ -190,18 +191,18 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 			scriptMain = tarDistDir + "/main.py"
 			isPythonFlag = true
 		} else {
-			log.Errorf(ctx, "script-execute-start `%s`,main script file is not exist in tar")
-			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "main script file  is not exist in tar")
+			log.Errorf(ctx, "script-execute-start `%s`,script file is not exist in tar")
+			return spec.ResponseFailWithFlags(spec.ParameterInvalid, "script file  is not exist in tar")
 		}
 	}
 	if response = sde.channel.Run(ctx, "chmod", fmt.Sprintf(`777 "%s"`, scriptMain)); !response.Success {
-		sde.stop(ctx, scriptFile)
+		return response
 	}
 	//①phthon脚本 判断是否包含.py文件，但执行不录制纸执行过程
 	if isPythonFlag {
 		response = insertContentToPythonScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
 		if !response.Success {
-			sde.stop(ctx, scriptFile)
+			sde.scriptFileDel(ctx, scriptFile)
 		}
 		return response
 	}
@@ -217,19 +218,38 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 	}
 	response = insertContentToScriptByExecute(ctx, sde.channel, scriptMain, fileArgs)
 	if !response.Success {
-		sde.stop(ctx, scriptFile)
+		sde.scriptFileDel(ctx, scriptFile)
 	}
 	//os.RemoveAll(tarDistDir)
-	var errInfo, errUploadInfo string
-	if uploadUrl != "" { //物理主机上传脚本执行过程
+	var errInfo, errUploadInfo, outContent string
+	if uploadUrl != "" { //物理主机上传脚本执行过程，文件限制64K,超过64k截取文件前60k显示
 		out = "/tmp/" + uid + ".out"
-		outContent, err := ioutil.ReadFile(out)
-		if err != nil {
-			errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
+		fi, err := os.Stat(out)
+		if fi.Size() > 1024*64 {
+			file, err := os.Open(out)
+			if err != nil {
+				errInfo += fmt.Sprintf("os.Open(out) failed  %s", err.Error())
+			}
+			r := bufio.NewReader(file)
+			buf := make([]byte, 1024)
+			outContent = "显示脚本过大，只显示执行过程前60k内容，如需查看全部内容，请进入演练对象查看文件:" + out + "\n"
+			for i := 0; i < 60; i++ {
+				n, err := r.Read(buf)
+				if err == io.EOF {
+					break
+				}
+				outContent += string(buf[:n])
+			}
+		} else {
+			outContentByte, err := ioutil.ReadFile(out)
+			if err != nil {
+				errInfo = fmt.Sprintf("os.ReadFile:script-out failed  %s", err.Error())
+			}
+			outContent = string(outContentByte)
 		}
 		data := make(map[string]string)
 		data["uid"] = uid
-		data["outputInfo"] = string(outContent)
+		data["outputInfo"] = outContent
 		err = uploadFile(uploadUrl, data)
 		if err != nil {
 			errUploadInfo = fmt.Sprintf("uploadFile script-out failed  %s", err.Error())
@@ -237,7 +257,6 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 
 		var newResult = make(map[string]interface{})
 		newResult["errInfo"] = errInfo
-		//newResult["errOsExecInfo"] = errOsExecInfo
 		newResult["errUploadInfo"] = errUploadInfo
 		newResult["outMsg"] = response.Result
 		response.Result = newResult
@@ -248,6 +267,10 @@ func (sde *ScriptExecuteExecutor) start(ctx context.Context, scriptFile, fileArg
 
 func (sde *ScriptExecuteExecutor) stop(ctx context.Context, scriptFile string) *spec.Response {
 	return recoverScript(ctx, sde.channel, scriptFile)
+}
+
+func (sde *ScriptExecuteExecutor) scriptFileDel(ctx context.Context, scriptFile string) *spec.Response {
+	return recoverScriptDel(ctx, sde.channel, scriptFile)
 }
 
 func (sde *ScriptExecuteExecutor) SetChannel(channel spec.Channel) {
