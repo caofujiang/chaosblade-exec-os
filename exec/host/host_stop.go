@@ -36,7 +36,12 @@ func NewHostStopActionSpec() spec.ExpActionCommandSpec {
 			ActionFlags: []spec.ExpFlagSpec{
 				&spec.ExpFlag{
 					Name:     "time",
-					Desc:     "restart after time, unit: now、minute such as 1、time such as 20:35",
+					Desc:     "restart after time, unit: now、minute such as +1、time such as 20:35、now",
+					Required: false,
+				},
+				&spec.ExpFlag{
+					Name:     "forced",
+					Desc:     "force shutdown , such as -f  ",
 					Required: false,
 				},
 			},
@@ -44,6 +49,15 @@ func NewHostStopActionSpec() spec.ExpActionCommandSpec {
 			ActionExample: `
 # Stop local host
 ./blade create host stop
+
+# Stop  host after time
+./blade create host stop --time=22:00  //在当天晚上10点关机
+./blade create host stop --time=2   //在 2 分钟后关机
+./blade create host stop --time=now  //立即关机
+
+
+# Stop  host forced shutdown
+./blade create host stop  --time= -f  //强制关机
 
 # Stop remote host: 192.168.56.102
 ./blade create host stop  --channel ssh --ssh-host 192.168.56.102  --ssh-user root  --install-path /root/chaosblade-1.7.1
