@@ -19,7 +19,6 @@ package mem
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path"
@@ -217,7 +216,7 @@ func (ce *memExecutor) Exec(uid string, ctx context.Context, model *spec.ExpMode
 		var err error
 		memPercent, err = strconv.Atoi(memPercentStr)
 		if err != nil {
-			log.Errorf(ctx, "mem-Exec `%s`: mem-percent  must be a positive integer", memPercentStr)
+			log.Errorf(ctx, "`%s`: mem-percent  must be a positive integer", memPercentStr)
 			return spec.ResponseFailWithFlags(spec.ParameterIllegal, "mem-percent", memPercentStr, "it must be a positive integer")
 		}
 		if memPercent > 100 || memPercent < 0 {
@@ -309,8 +308,8 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 	if avoidBeingKilled {
 		scoreAdjFile := fmt.Sprintf(processOOMAdj, os.Getpid())
 		if _, err := os.Stat(scoreAdjFile); err == nil || os.IsExist(err) {
-			if err := ioutil.WriteFile(scoreAdjFile, []byte(oomMinAdj), 0644); err != nil {
-				log.Errorf(ctx, "mem-start-run burn memory by %s mode failed, cannot edit the process oom_score_adj, %v", burnMemMode, err)
+			if err := os.WriteFile(scoreAdjFile, []byte(oomMinAdj), 0644); err != nil {
+				log.Errorf(ctx, "run burn memory by %s mode failed, cannot edit the process oom_score_adj, %v", burnMemMode, err)
 			}
 		} else {
 			log.Errorf(ctx, "mem-start-score adjust file: %s not exists, %v", scoreAdjFile, err)
