@@ -20,13 +20,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-exec-os/exec"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/chaosblade-io/chaosblade-exec-os/exec"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/category"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
@@ -228,9 +229,48 @@ func parseDate(content string) string {
 			content = strings.Replace(content, text[0], strings.Replace(text[0], "\\", "", 1), 1)
 			continue
 		}
-		content = strings.Replace(content, text[0], "$(date \""+text[1]+"\")", 1)
+		// Parse the time format and generate actual timestamp
+		timeFormat := text[1]
+		currentTime := time.Now()
+		formattedTime := currentTime.Format(convertDateFormat(timeFormat))
+		content = strings.Replace(content, text[0], formattedTime, 1)
 	}
 	return content
+}
+
+// convertDateFormat converts date command format to Go time format
+func convertDateFormat(dateFormat string) string {
+	// Convert common date command format specifiers to Go time format
+	goFormat := dateFormat
+	// Year
+	goFormat = strings.ReplaceAll(goFormat, "%Y", "2006")
+	goFormat = strings.ReplaceAll(goFormat, "%y", "06")
+	// Month
+	goFormat = strings.ReplaceAll(goFormat, "%m", "01")
+	goFormat = strings.ReplaceAll(goFormat, "%B", "January")
+	goFormat = strings.ReplaceAll(goFormat, "%b", "Jan")
+	// Day
+	goFormat = strings.ReplaceAll(goFormat, "%d", "02")
+	goFormat = strings.ReplaceAll(goFormat, "%e", "2")
+	// Hour
+	goFormat = strings.ReplaceAll(goFormat, "%H", "15")
+	goFormat = strings.ReplaceAll(goFormat, "%I", "03")
+	goFormat = strings.ReplaceAll(goFormat, "%k", "15")
+	goFormat = strings.ReplaceAll(goFormat, "%l", "3")
+	// Minute
+	goFormat = strings.ReplaceAll(goFormat, "%M", "04")
+	// Second
+	goFormat = strings.ReplaceAll(goFormat, "%S", "05")
+	// AM/PM
+	goFormat = strings.ReplaceAll(goFormat, "%p", "PM")
+	// Time zone
+	goFormat = strings.ReplaceAll(goFormat, "%Z", "MST")
+	goFormat = strings.ReplaceAll(goFormat, "%z", "-0700")
+	// Weekday
+	goFormat = strings.ReplaceAll(goFormat, "%A", "Monday")
+	goFormat = strings.ReplaceAll(goFormat, "%a", "Mon")
+
+	return goFormat
 }
 
 func parseRandom(content string) *spec.Response {
