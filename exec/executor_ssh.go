@@ -309,7 +309,7 @@ func (c *SSHClient) connect() error {
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			return nil
 		},
-		Timeout: 10 * time.Second,
+		Timeout: 60 * time.Second,
 	}
 	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), &clientConfig)
 	if err != nil {
