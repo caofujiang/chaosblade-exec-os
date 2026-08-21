@@ -26,13 +26,19 @@ import (
 func getUsed(ctx context.Context, percpu bool, cpuIndex int) float64 {
 	totalCpuPercent, err := cpu.Percent(time.Second, percpu)
 	if err != nil {
-		log.Fatalf(ctx, "get cpu usage fail, %s", err.Error())
+		log.Errorf(ctx, "get cpu usage fail, %s", err.Error())
+		return safeUsedPercent
 	}
 	if percpu {
-		if cpuIndex > len(totalCpuPercent) {
-			log.Fatalf(ctx, "illegal cpu index %d", cpuIndex)
+		if cpuIndex >= len(totalCpuPercent) {
+			log.Errorf(ctx, "illegal cpu index %d", cpuIndex)
+			return safeUsedPercent
 		}
 		return totalCpuPercent[cpuIndex]
+	}
+	if len(totalCpuPercent) == 0 {
+		log.Errorf(ctx, "get cpu usage fail, empty result")
+		return safeUsedPercent
 	}
 	return totalCpuPercent[0]
 }

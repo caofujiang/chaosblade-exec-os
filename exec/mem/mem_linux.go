@@ -71,7 +71,16 @@ func getAvailableAndTotal(ctx context.Context, burnMemMode string, includeBuffer
 	total = int64(virtualMemory.Total)
 	available = int64(virtualMemory.Free)
 	if burnMemMode == "ram" && !includeBufferCache {
-		available = available + int64(virtualMemory.Buffers+virtualMemory.Cached)
+		// buffer/cache is reclaimable and should be counted as available. Prefer the kernel's
+		// estimated Available (it already accounts for the reclaimable part and is closer to the
+		// real allocatable amount than Free+Buffers+Cached, avoiding over-filling from
+		// overestimation); fall back to the original Free+Buffers+Cached when the field is
+		// unavailable (0) on old kernels.
+		if virtualMemory.Available > 0 {
+			available = int64(virtualMemory.Available)
+		} else {
+			available = available + int64(virtualMemory.Buffers+virtualMemory.Cached)
+		}
 	}
 	return total, available, nil
 }

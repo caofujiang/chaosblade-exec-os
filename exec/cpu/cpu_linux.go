@@ -35,7 +35,8 @@ func getUsed(ctx context.Context, percpu bool, cpuIndex int) float64 {
 	if pid != nil {
 		p, err := strconv.Atoi(pid.(string))
 		if err != nil {
-			log.Fatalf(ctx, "get cpu usage fail, %s", err.Error())
+			log.Errorf(ctx, "get cpu usage fail, %s", err.Error())
+			return safeUsedPercent
 		}
 
 		cgroupRoot := ctx.Value("cgroup-root")
@@ -47,34 +48,41 @@ func getUsed(ctx context.Context, percpu bool, cpuIndex int) float64 {
 
 		cgroup, err := cgroups.Load(exec.Hierarchy(cgroupRoot.(string)), exec.PidPath(p))
 		if err != nil {
-			log.Fatalf(ctx, "get cpu usage fail, %s", err.Error())
+			log.Errorf(ctx, "get cpu usage fail, %s", err.Error())
+			return safeUsedPercent
 		}
 
 		stats, err := cgroup.Stat(cgroups.IgnoreNotExist)
 		if err != nil {
-			log.Fatalf(ctx, "get cpu usage fail, %s", err.Error())
-		} else {
-			pre := float64(stats.CPU.Usage.Total) / float64(time.Second)
-			time.Sleep(time.Second)
-			nextStats, err := cgroup.Stat(cgroups.IgnoreNotExist)
-			if err != nil {
-				log.Fatalf(ctx, "get cpu usage fail, %s", err.Error())
-			} else {
-				next := float64(nextStats.CPU.Usage.Total) / float64(time.Second)
-				return ((next - pre) * 100) / float64(cpuCount)
-			}
+			log.Errorf(ctx, "get cpu usage fail, %s", err.Error())
+			return safeUsedPercent
 		}
+		pre := float64(stats.CPU.Usage.Total) / float64(time.Second)
+		time.Sleep(time.Second)
+		nextStats, err := cgroup.Stat(cgroups.IgnoreNotExist)
+		if err != nil {
+			log.Errorf(ctx, "get cpu usage fail, %s", err.Error())
+			return safeUsedPercent
+		}
+		next := float64(nextStats.CPU.Usage.Total) / float64(time.Second)
+		return ((next - pre) * 100) / float64(cpuCount)
 	}
 
 	totalCpuPercent, err := cpu.Percent(time.Second, percpu)
 	if err != nil {
-		log.Fatalf(ctx, "get cpu usage fail, %s", err.Error())
+		log.Errorf(ctx, "get cpu usage fail, %s", err.Error())
+		return safeUsedPercent
 	}
 	if percpu {
-		if cpuIndex > len(totalCpuPercent) {
-			log.Fatalf(ctx, "illegal cpu index %d", cpuIndex)
+		if cpuIndex >= len(totalCpuPercent) {
+			log.Errorf(ctx, "illegal cpu index %d", cpuIndex)
+			return safeUsedPercent
 		}
 		return totalCpuPercent[cpuIndex]
+	}
+	if len(totalCpuPercent) == 0 {
+		log.Errorf(ctx, "get cpu usage fail, empty result")
+		return safeUsedPercent
 	}
 	return totalCpuPercent[0]
 }

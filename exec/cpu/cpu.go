@@ -302,6 +302,11 @@ func (ce *cpuExecutor) start(ctx context.Context, cpuList string, cpuCount, cpuP
 
 const period = int64(1000000000)
 
+// safeUsedPercent is the fallback value returned when CPU usage cannot be sampled: treat it as
+// fully loaded so the feedback control adds no more load this round, avoiding runaway CPU
+// saturation caused by a sampling failure.
+const safeUsedPercent = 100.0
+
 func slope(ctx context.Context, cpuPercent int, climbTime int, slopePercent *float64, percpu bool, cpuIndex int) {
 	if climbTime != 0 {
 		var ticker = time.NewTicker(time.Second)
@@ -341,6 +346,12 @@ func burn(ctx context.Context, quota <-chan int64, slopePercent float64, percpu 
 			q = q + offset
 			if q < 0 {
 				q = 0
+			}
+			// Clamp the upper bound: busy-wait time within a single period must not exceed period.
+			// Otherwise, when sampling reads low, offset stays positive and q grows unbounded,
+			// degenerating burn into pure busy-waiting that saturates the core and defeats cpu-percent.
+			if q > period {
+				q = period
 			}
 			ds := period - q
 			if ds < 0 {

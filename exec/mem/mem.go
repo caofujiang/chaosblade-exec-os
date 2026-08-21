@@ -252,6 +252,37 @@ type (
 
 const PageCounterMax uint64 = 9223372036854770000
 
+// Block is 128KB and Blocks is 48MB (384x larger). When filling memory the target MB must be
+// converted into the number of blocks of the matching type; the two block sizes differ, so the
+// conversion factor must be distinguished, otherwise the memory request is amplified severalfold.
+const (
+	// Filling 1MB requires 8 128KB Blocks
+	blocksPerMB = 8
+	// Size of each big Blocks unit, in MB
+	blocksSizeMB = 48
+)
+
+// blockCountForMB returns the number of 128KB Blocks needed to fill mb megabytes (non big-mem mode).
+func blockCountForMB(mb int64) int {
+	if mb <= 0 {
+		return 0
+	}
+	return int(blocksPerMB * mb)
+}
+
+// blocksCountForMB returns the number of 48MB Blocks needed to fill mb megabytes (big-mem mode).
+// Rounds up, returning at least 1 when mb>0 so a positive target is not truncated to 0.
+func blocksCountForMB(mb int64) int {
+	if mb <= 0 {
+		return 0
+	}
+	count := int((mb + blocksSizeMB - 1) / blocksSizeMB)
+	if count < 1 {
+		count = 1
+	}
+	return count
+}
+
 func calculateMemSize(ctx context.Context, burnMemMode string, percent, reserve int, includeBufferCache bool) (int64, int64, error) {
 	total, available, err := getAvailableAndTotal(ctx, burnMemMode, includeBufferCache)
 	if err != nil {
@@ -326,8 +357,13 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 		memRate = 100
 	}
 	if bigMem {
-		var caches = make(map[int][]Blocks, 1)
-		caches[count] = make([]Blocks, 0)
+		// Allocate a new, exactly-sized block of memory on each tick and store it in the map,
+		// rather than appending to one large slice. append triggers a reallocation in which the
+		// old and new backing arrays coexist momentarily, doubling the peak memory toward the
+		// physical limit; independent allocation lets the peak grow smoothly with the cumulative
+		// fill, without spikes. The map keeps every allocation resident so filled memory is not
+		// reclaimed by GC.
+		caches := make(map[int][]Blocks)
 		for range tick {
 			total, expectMem, err := calculateMemSize(ctx, burnMemMode, memPercent, memReserve, includeBufferCache)
 			if err != nil {
@@ -349,16 +385,10 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 						continue
 					}
 				}
-				fillSize := int(8 * fillMem)
-
-				buf := caches[count]
-				if cap(buf)-len(buf) < fillSize && int(math.Floor(float64(cap(buf))*1.25)) >= int(8*expectMem) {
-					count += 1
-					caches[count] = make([]Blocks, 0)
-					buf = caches[count]
-				}
-				log.Debugf(ctx, "mem-start-count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d", count, len(buf), cap(buf), expectMem, fillSize)
-				caches[count] = append(buf, make([]Blocks, fillSize)...)
+				fillSize := blocksCountForMB(fillMem)
+				log.Debugf(ctx, "mem-start-count: %d, expect mem: %d, fill size: %d", count, expectMem, fillSize)
+				caches[count] = make([]Blocks, fillSize)
+				count++
 			} else {
 				log.Infof(ctx, "mem-start-big-mem-expectMem-info", "expectMem", expectMem)
 			}
@@ -381,10 +411,10 @@ func (ce *memExecutor) start(ctx context.Context, memPercent, memReserve, memRat
 						continue
 					}
 				}
-				fillSize := int(8 * fillMem)
+				fillSize := blockCountForMB(fillMem)
 				buf := cache[count]
 				if cap(buf)-len(buf) < fillSize &&
-					int(math.Floor(float64(cap(buf))*1.25)) >= int(8*expectMem) {
+					int(math.Floor(float64(cap(buf))*1.25)) >= blockCountForMB(expectMem) {
 					count += 1
 					cache[count] = make([]Block, 0)
 					buf = cache[count]
